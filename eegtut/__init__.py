@@ -112,3 +112,51 @@ def average_of_n(epochs, channel, counts):
     axes[0].set_ylabel(f"{channel} (µV)")
     fig.tight_layout()
     return fig
+
+
+def clean_recording(file):
+    """Chapter 3 in one step: name the channels, filter 0.5 to 40 Hz, average reference.
+
+    Blinks are left in; they matter little for what chapter 5 does with the result.
+    """
+    import mne
+    raw = mne.io.read_raw_fif(file, preload=True)
+    layout = mne.channels.make_standard_montage("biosemi64")
+    raw.rename_channels(dict(zip(raw.ch_names[:64], layout.ch_names)))
+    raw.set_montage(layout)
+    raw.filter(0.5, 40)
+    raw.set_eeg_reference("average")
+    return raw
+
+
+def compare_spectra(recordings, channel, fmax=30):
+    """Overlay the power spectrum of several recordings at one channel. recordings: label -> raw."""
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(7, 3.5))
+    for label, raw in recordings.items():
+        spectrum = raw.compute_psd(fmin=1, fmax=fmax, picks=[channel], n_fft=int(2 * raw.info["sfreq"]))
+        ax.plot(spectrum.freqs, spectrum.get_data()[0] * 1e12, label=label)
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel(f"Power at {channel} (µV²/Hz)")
+    ax.legend(frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def plot_scores(times, scores):
+    """Decoding score over time. scores: label -> one score per time point. Chance is 0.5."""
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(7, 3.5))
+    for label, values in scores.items():
+        ax.plot(times, values, label=label)
+    ax.axhline(0.5, color="0.5", lw=0.8)
+    ax.axvline(0, color="0.5", lw=0.8, ls="--")
+    ax.text(times[0], 0.49, "chance", ha="left", va="top", color="0.4", fontsize=9)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Decoding score (AUC)")
+    ax.set_ylim(0.4, 1)
+    ax.legend(frameon=False, loc="upper right")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return fig

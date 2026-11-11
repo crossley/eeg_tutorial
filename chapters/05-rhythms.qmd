@@ -1,0 +1,188 @@
+---
+title: "Brain rhythms"
+---
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("WARNING")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+The ERP is one way to look at EEG: average over trials and see what
+the brain does after an event. There is a second way that is just as
+old. EEG is full of **rhythms**, regular waves that rise and fall many
+times a second, and how strong they are changes with what the brain is
+doing. This page shows how to see them, measure them, and watch them
+change.
+
+## A rhythm you can see by eye
+
+At the start of the visit, before the task, the participant sat for a
+few minutes with their eyes closed. Here is a little of that
+recording, at two electrodes at the back of the head and two at the
+front. (`eegtut.clean_recording` does the filtering and re-referencing
+from chapter 3 in one line.)
+
+```{python}
+import mne
+import eegtut
+
+rest = eegtut.clean_recording(eegtut.raw_rest_file())
+rest.plot(start=20, duration=4, picks=["POz", "Oz", "Fz", "FCz"],
+          scalings=dict(eeg=30e-6), show_scrollbars=False);
+```
+
+These are not random wiggles. They are a steady wave, clearest in the
+top two traces, from the back of the head. Count the peaks in one
+second and you will get about ten.
+
+This is the **alpha rhythm**, the first thing ever seen in a human EEG,
+in the 1920s. It is strongest at the back of the head when the eyes are
+closed, though as you can see it reaches the front as well. The usual way to think about it is that visual cortex, with
+nothing to look at, falls into an idling rhythm.
+
+## Measuring rhythms: the power spectrum
+
+Counting peaks does not scale. The **power spectrum** does the counting
+for us: it takes a signal and reports how much of it there is at each
+frequency. You met it briefly at the end of chapter 2.
+
+```{python}
+spectrum = rest.compute_psd(fmin=1, fmax=40)
+spectrum.plot(picks=["POz"], amplitude=False);
+```
+
+Frequency runs along the bottom, in hertz (Hz, cycles per second).
+Height is **power**: how strong the signal is at that frequency. The
+general downward slope is normal for EEG, which always has more slow
+activity than fast. The alpha rhythm is the tall peak at 10 Hz standing
+well clear of that slope.
+
+Where on the head is it?
+
+```{python}
+spectrum.plot_topomap(bands={"Alpha (8-13 Hz)": (8, 13)}, size=3);
+```
+
+Strongest at the back, as the traces suggested.
+
+Rhythms are grouped into **bands** with Greek-letter names. The exact
+limits vary a little from paper to paper.
+
+| band | frequency | often seen |
+|---|---|---|
+| delta | below 4 Hz | deep sleep |
+| theta | 4 to 8 Hz | front and centre of the head during demanding tasks |
+| alpha | 8 to 13 Hz | back of the head, relaxed, eyes closed |
+| beta | 13 to 30 Hz | over motor cortex; drops around movement |
+| gamma | above 30 Hz | hard to measure at the scalp; easily confused with muscle |
+
+## Rhythms change with what the brain is doing
+
+If alpha is visual cortex idling, it should shrink when the participant
+opens their eyes and starts the task. Compare the rest recording with
+the task recording from chapters 2 and 3, at the same electrode:
+
+```{python}
+task = eegtut.clean_recording(eegtut.raw_task_file())
+eegtut.compare_spectra({"rest, eyes closed": rest, "doing the task": task}, channel="POz");
+```
+
+During the task the alpha peak is about a tenth of its size at rest.
+Same person, same electrode, a few minutes apart. The rhythm is a
+property of the brain's state, not a fixed feature of the person.
+
+::: {.callout-tip}
+## Try it
+Change `channel="POz"` to `channel="Fz"`. Is the difference between
+rest and task as large at the front of the head?
+:::
+
+## Rhythms change from moment to moment
+
+A spectrum of a whole recording is an average over minutes. Rhythms
+also change within a trial, in a fraction of a second. To see that we
+need to know the power at each frequency *at each moment*, which is
+called a **time-frequency** analysis.
+
+First cut the task recording into epochs, as in chapter 3, but longer:
+from one second before each stimulus to one and a half seconds after.
+Rhythms are slow things, and measuring a 5 Hz wave takes a good part of
+a second of signal.
+
+```{python}
+events = mne.find_events(task, stim_channel="Status")
+epochs = mne.Epochs(task, events, event_id={"A": 20, "B": 28}, tmin=-1, tmax=1.5,
+                    baseline=None, reject=dict(eeg=150e-6), preload=True)
+```
+
+Then measure power at every frequency from 3 to 30 Hz, at every moment,
+and average over the epochs.
+
+```{python}
+import numpy as np
+
+frequencies = np.arange(3, 31)
+power = epochs.compute_tfr("morlet", freqs=frequencies, n_cycles=frequencies / 2, average=True)
+power.plot(picks="POz", baseline=(-0.6, -0.2), mode="percent", tmin=-0.6, tmax=1.2, vlim=(-1, 1));
+```
+
+Time runs left to right with the stimulus at zero, and frequency runs
+bottom to top. Colour is the change in power compared with the stretch
+before the stimulus: red is more, blue is less, and -0.5 means power
+has halved.
+
+Two things stand out.
+
+- **The blue band from about 9 to 16 Hz, starting just after the
+  stimulus.** Alpha power drops by more than half when the stimulus
+  appears and stays down. The
+  idling rhythm is interrupted the moment visual cortex has work to
+  do. It is the same effect as rest versus task, happening within a
+  single trial.
+- **The red patch at the bottom, just after zero.** This is the ERP
+  from chapter 4 seen another way. A sharp deflection after the
+  stimulus counts as a brief burst of slow activity, and it shows up
+  here. The second red patch towards one second is probably the same
+  thing again for the key press and the feedback ring, which come at
+  about that time.
+
+::: {.callout-note}
+## Two views of the same data
+The ERP keeps only activity that happens at the same moment, in the
+same direction, on every trial. A rhythm that gets weaker after the
+stimulus, like alpha here, is invisible in an ERP, because its peaks
+and troughs fall at different moments on different trials and average
+to nothing. Time-frequency analysis measures the *strength* of the
+rhythm on each trial before averaging, so it survives. Neither view is
+better; they show different things.
+:::
+
+::: {.callout-tip}
+## Try it
+Change `picks="POz"` to `picks="C3"`, over the left motor cortex. The
+participant pressed a key with their fingers around half a second to a
+second after the stimulus. Look between 13 and 30 Hz: is there a drop in beta
+power around then?
+:::
+
+## Summary
+
+- EEG contains rhythms. The power spectrum shows how strong the signal
+  is at each frequency.
+- Rhythms are grouped into bands: delta, theta, alpha, beta, gamma.
+- Alpha, around 10 Hz, is strongest at the back of the head with eyes
+  closed, and shrinks when visual cortex is busy.
+- Time-frequency analysis shows how rhythms change within a trial. It
+  sees changes that an ERP cannot, and the other way round.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+The lab records a few minutes of eyes-closed rest on every visit and
+compares the rest spectrum from one visit to the next, as a reference
+for how much a person's EEG changes when nothing about the task is
+involved. Rhythms are also the starting point for the connectivity
+analysis in chapter 7, which asks whether the rhythm at one electrode
+keeps in step with the rhythm at another.
+:::

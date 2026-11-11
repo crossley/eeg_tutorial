@@ -1,0 +1,186 @@
+---
+title: "Decoding"
+---
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("ERROR")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+In chapter 4 you compared the ERPs to category A and category B at one
+electrode and could hardly tell them apart. Yet the participant could
+tell A from B, so the information must be in the brain somewhere. This
+page introduces a more sensitive way of finding it, called **decoding**
+(or multivariate pattern analysis, MVPA).
+
+## The idea
+
+An ERP comparison looks at one electrode at a time. But a difference
+between two conditions need not be large at any one electrode. It can
+be a small difference spread over many: a little more here, a little
+less there. No single electrode shows it clearly, but the *pattern*
+across all 64 does.
+
+Decoding looks for such patterns by turning the question round. Instead
+of asking "is the voltage at this electrode different for A and B?", it
+asks: **given the voltages at all 64 electrodes on one trial, can a
+computer guess whether the stimulus was an A or a B?** If it can guess
+better than chance, the brain activity must carry information about
+the category.
+
+The guessing is done by a **classifier**. It works in two stages:
+
+1. **Training.** The classifier is shown many trials along with the
+   right answers, and works out how to weigh the 64 electrodes so as to
+   separate the two kinds of trial as well as it can.
+2. **Testing.** It is shown trials it has *not* seen before, without
+   the answers, and guesses. We score how often it is right.
+
+Testing on new trials is the whole point. A classifier scored on the
+trials it learned from can do well by memorising them, which tells us
+nothing. The standard routine, **cross-validation**, splits the trials
+into five parts, trains on four, tests on the fifth, and repeats so
+that each part takes a turn as the test.
+
+The score we use (called AUC) runs from 0.5, which is guessing, to 1,
+which is perfect.
+
+## Setting up
+
+The same cleaned epochs as chapter 4, keeping the ordinary training
+trials. To keep things quick we keep every fourth time point.
+
+```{python}
+import mne
+import eegtut
+
+epochs = mne.read_epochs(eegtut.epochs_file(visit=1))
+epochs.interpolate_bads()
+epochs = epochs["phase == 'train'"].decimate(4)
+print(len(epochs), "trials,", len(epochs.times), "time points")
+```
+
+Then the classifier. This is the one block of the tutorial you can
+treat as a recipe. It says: put the electrodes on a common scale, use
+a standard classifier (logistic regression), and train and test a
+separate one at every time point, so that we find out not just whether
+the information is there but *when*.
+
+```{python}
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from mne.decoding import SlidingEstimator, cross_val_multiscore
+
+classifier = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+decoder = SlidingEstimator(classifier, scoring="roc_auc")
+```
+
+## Example 1: something we know is there
+
+Start with a case where we know the answer. In chapter 4, wide and
+narrow stripes gave clearly different ERPs at the back of the head at
+about 0.1 seconds. A classifier should find that easily, and at the
+same moment.
+
+```{python}
+trials = epochs["x < 40 or x > 60"]
+is_narrow = trials.metadata["x"] > 60
+
+scores = cross_val_multiscore(decoder, trials.get_data(), is_narrow, cv=5).mean(axis=0)
+eegtut.plot_scores(trials.times, {"wide or narrow stripes": scores});
+```
+
+Read it like an ERP, with time along the bottom, except that the
+height is now how well the classifier could tell the two kinds of
+trial apart at that moment.
+
+- **Before the stimulus** the score wanders around chance, as it must:
+  nothing has been shown yet, so there is nothing to decode. Notice how
+  far it wanders, up to about 0.58. That is the size of the noise.
+- **At about 0.1 seconds** it shoots up to almost 0.9. From the pattern
+  over the scalp at that one instant, on a single trial, the classifier
+  can nearly always say whether the stripes were wide or narrow.
+- **After that** it drops back, rises again to about 0.8 at a quarter
+  of a second, and then fades slowly towards chance.
+
+This is the same effect you saw in the ERP, at the same time. Decoding
+did not find anything new here. It is a check that the method works.
+
+## Example 2: something we could not see
+
+Now the question the ERP could not answer: category A or category B?
+
+```{python}
+is_B = epochs.metadata["cat"] == "B"
+
+category_scores = cross_val_multiscore(decoder, epochs.get_data(), is_B, cv=5).mean(axis=0)
+eegtut.plot_scores(epochs.times, {"wide or narrow stripes": scores, "category A or B": category_scores});
+```
+
+The category line peaks at about 0.67 at a quarter of a second. That
+is far lower than for stripe width. Is it more than noise? Before the
+stimulus the line wanders up to about 0.55, so one point at 0.6 would
+not mean much. But from 0.2 to 0.5 seconds it stays between about 0.57
+and 0.67 at every time point, and it is that sustained stretch that is
+convincing. There is information about the category in the EEG, even
+though no single electrode's ERP showed it clearly.
+
+A score of 0.67 is typical. Decoding scores from EEG are usually modest,
+and what matters is whether they are reliably above chance, not whether
+they are near 1.
+
+## What exactly is being decoded?
+
+It is tempting to say the classifier has found "the brain's
+representation of the category". Remember the red and green rings in
+chapter 4, and ask what else differs between A trials and B trials.
+
+Here the categories are *defined* by how the stimulus looks: by the
+combination of stripe width and tilt. So A and B stimuli differ
+physically, on average, and we have just seen that the EEG carries a
+lot of information about stripe width. Notice too that the two lines
+in the plot rise and fall at the same moments. The classifier may be
+picking up what the stimulus looks like and nothing about the decision. A
+classifier uses whatever works; it does not know which difference you
+care about.
+
+Separating these takes more careful comparisons than we will do here.
+For now the point is the same as in chapter 4: above-chance decoding
+shows that the two sets of trials differ, and says nothing by itself
+about why.
+
+::: {.callout-tip}
+## Try it
+Decode which key the participant went on to press instead of the
+category: replace the `is_B` line with
+`is_B = epochs.metadata["resp"] == "B"`. On this first visit the
+participant was still learning and often pressed the wrong key, so the
+response and the category are not the same thing. Which can be decoded
+better from the half second after the stimulus?
+:::
+
+## Summary
+
+- Decoding asks whether a classifier can tell two kinds of trial apart
+  from the pattern over all electrodes, on single trials.
+- It must always be tested on trials the classifier was not trained on.
+- Doing it separately at each time point shows *when* the information
+  is present.
+- It can find differences too subtle or too spread out for an ERP at
+  one electrode.
+- Above-chance decoding means the trials differ. Working out which
+  difference the classifier used is a separate job.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+Category decoding over time, done this way, is one of the lab's main
+measures. The real analyses differ in scale more than in kind: more
+repetitions of the cross-validation, all time points, and every
+participant and visit. They also go a step further and train a
+classifier on one part of the experiment and test it on another, to
+ask whether the pattern that carries the category stays the same as
+the task is learned. Chapter 8 introduces that idea.
+:::
