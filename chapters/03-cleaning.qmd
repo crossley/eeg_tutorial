@@ -159,7 +159,7 @@ falls together with that channel:
 
 ```{python}
 blink_components, scores = ica.find_bads_eog(raw, ch_name="EXG2", measure="correlation", threshold=0.5)
-print("blink component:", blink_components)
+print("blink component:", *blink_components)
 ```
 
 Now remove it and compare.
