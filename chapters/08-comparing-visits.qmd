@@ -1,0 +1,182 @@
+---
+title: "Comparing one stretch of the experiment with another"
+---
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/08-comparing-visits.ipynb)
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("ERROR")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+::: {.callout-note}
+## An advanced chapter
+Like the last one, this chapter covers a method the lab uses that goes
+beyond a first course in EEG.
+:::
+
+Every analysis so far has treated a visit as one lump: all its trials
+averaged, or all used to train a classifier. But the participants in
+this experiment were *learning*, over thousands of trials and several
+visits. A natural question is whether the brain's response at the end
+is the same as at the start, and if not, how it got from one to the
+other.
+
+This page shows the basic tool for asking that: cut the experiment
+into blocks, describe the brain's response in each block, and measure
+how alike every block is to every other. It does not try to answer
+the question, which takes many participants and a good deal more
+statistics. The aim is that you can read the kind of figure this
+produces.
+
+## A pattern for each block
+
+Take the first two visits of our participant and cut each into blocks
+of 100 trials. For each block, compute the ERP, as in chapter 4. That
+gives a table of numbers for the block: the voltage at each of the 64
+electrodes at each moment from 0.1 to 0.5 seconds after the stimulus.
+Laid out in one long row, that table is the block's **pattern**: a
+complete description of the average response in that stretch of the
+experiment.
+
+```{python}
+from pathlib import Path
+import mne
+
+data = Path("data/eeg_tutorial_data_v1")
+
+patterns = []
+for visit in [1, 2]:
+    epochs = mne.read_epochs(data / f"sub-01/epochs/sub-01_visit-{visit}_stim-epo.fif")
+    epochs.interpolate_bads()
+    epochs = epochs["phase == 'train'"]
+    for start in [0, 100, 200, 300, 400]:
+        erp = epochs[start:start + 100].average().crop(0.1, 0.5)
+        patterns.append(erp.data.ravel())
+
+print(len(patterns), "blocks, each a pattern of", len(patterns[0]), "numbers")
+```
+
+Blocks 1 to 5 are the first 500 trials of visit 1, in order, and
+blocks 6 to 10 are the first 500 trials of visit 2, two days later.
+
+## How alike are two blocks?
+
+To compare two blocks, **correlate** their patterns. If the two ERPs
+have the same shape over the scalp and over time, the correlation is
+near 1. If they are unrelated it is near 0. Doing this for every pair
+of blocks gives a **similarity matrix**, an idea borrowed from a
+widely used family of methods for comparing patterns of brain activity
+[@kriegeskorte2008].
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+similarity = np.corrcoef(patterns)
+
+plt.imshow(similarity, vmin=0.88, vmax=1, extent=(0.5, 10.5, 10.5, 0.5))
+plt.colorbar(label="Similarity (correlation)")
+plt.xlabel("Block")
+plt.ylabel("Block");
+```
+
+## Reading the matrix
+
+Each small square compares two blocks: the one for its row and the one
+for its column. A few things to check first, on any matrix like this.
+
+- **The diagonal** runs from top left to bottom right, and is all 1:
+  every block is identical to itself.
+- **The matrix is a mirror image** of itself across the diagonal,
+  because comparing block 2 with block 7 is the same as comparing 7
+  with 2.
+- **The scale.** Every value here is above 0.88. The ERP has the same
+  broad shape in every block, which is no surprise: it is the same
+  person looking at the same kind of stimulus. What we are reading are
+  small differences on top of a great deal of sameness.
+
+Now the structure. The matrix falls into four quarters. The top-left
+quarter compares visit-1 blocks with each other, and the bottom-right
+compares visit-2 blocks with each other. Both are bright, about 0.97.
+The other two quarters compare a block from one visit with a block
+from the other, and they are darker, about 0.93.
+
+So blocks from the same visit are more alike than blocks from
+different visits.
+
+## What could that mean?
+
+It is tempting to read this as the brain's response having changed
+between visit 1 and visit 2 because the participant learned something.
+It might have. But go through what else differs between two visits,
+as we did for the red and green rings in chapter 4.
+
+- The cap was taken off and put back on. The electrodes are not in
+  exactly the same places, and the gel contacts are different.
+- It is a different day. The participant may be more or less alert,
+  and may have slept differently.
+- Within a visit, the participant may tire, and the gel slowly dries.
+- And the participant has had more practice.
+
+All of these would make blocks from the same visit more alike than
+blocks from different visits. The matrix shows *that* the patterns
+differ. It cannot say *why*.
+
+There is a further catch. Each block's ERP comes from only 100 trials,
+so it is still noisy, as you saw in chapter 4. Two blocks would not
+correlate perfectly even if nothing at all had changed between them. A
+value of 0.97 might be as high as the noise allows.
+
+::: {.callout-tip}
+## Try it
+Make the blocks smaller: change the list of starts to
+`[0, 50, 100, 150, 200, 250, 300, 350, 400, 450]`, change `start + 100`
+to `start + 50`, and change the `10.5`s in the plot to `20.5`. There
+are now twenty blocks. Do the similarities go up or down, and why? Is
+the four-quarter structure still there?
+:::
+
+## What it takes to go further
+
+Separating those explanations is what turns this picture into
+research. The usual ingredients are:
+
+- **A measure of the noise.** Split each block's trials into two random
+  halves and compare the halves. That shows how alike two patterns are
+  when nothing has changed, which is the ceiling everything else is
+  judged against.
+- **Something to compare against.** A recording that should not change
+  with learning, such as the eyes-closed rest from chapter 5, shows how
+  much two visits differ for reasons that have nothing to do with the
+  task.
+- **A design that pulls the explanations apart.** For instance, visits
+  on consecutive days with little practice between, against visits
+  weeks apart with a lot.
+- **Many participants,** and a test across them, as in chapter 9.
+
+The same recipe works for any measurement that gives a pattern per
+block, not only the ERP: the classifier patterns from chapter 6, or the
+table of connections from chapter 7.
+
+## Summary
+
+- To study change over an experiment, cut it into blocks and describe
+  each block by a pattern.
+- A similarity matrix holds the correlation between every pair of
+  blocks. Read the diagonal, the scale, and then the structure.
+- Blocks from the same visit are usually more alike than blocks from
+  different visits, for many reasons, most of them not interesting.
+- Telling those reasons apart takes a noise measure, a reference,
+  a suitable design and a group.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+The lab builds matrices like this one for every participant, over all
+of their visits, from three kinds of pattern: ERPs, classifier
+patterns and connectivity patterns. Each is computed from random
+halves of the trials so that the noise is known, and the matrices are
+then analysed with statistical models across participants.
+:::

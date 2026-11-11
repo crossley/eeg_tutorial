@@ -1,0 +1,215 @@
+---
+title: "From one participant to a group"
+---
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/09-group.ipynb)
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("ERROR")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+Everything so far has been one participant. That is the right way to
+learn the methods, but it is not how results are established. One
+person's brain, on one day, can show almost anything. A finding is
+something that holds across people.
+
+This page takes the two ERP effects from chapter 4, stripe width and
+feedback, and asks whether they hold in a group of ten participants
+who did the same task.
+
+## The data
+
+For each participant we have the same averages you made in chapter 4,
+from their first visit: the response to stimuli with wide stripes and
+with narrow stripes, and the response to correct and incorrect
+feedback. All the cleaning and averaging has been done, exactly as in
+chapters 3 and 4, so each file is small.
+
+```{python}
+from pathlib import Path
+import mne
+
+data = Path("data/eeg_tutorial_data_v1")
+files = sorted((data / "group").glob("*_visit-1-ave.fif"))
+print(len(files), "participants")
+
+wide = [mne.read_evokeds(file, condition="wide") for file in files]
+narrow = [mne.read_evokeds(file, condition="narrow") for file in files]
+```
+
+`wide` is now a list of ten ERPs, one per participant, and so is
+`narrow`.
+
+## People differ
+
+Here is the response to wide stripes at `Oz` for each participant
+separately.
+
+```{python}
+each = {f"participant {number}": erp for number, erp in enumerate(wide, start=1)}
+mne.viz.plot_compare_evokeds(each, picks="Oz");
+```
+
+They all show a response beginning at about 0.1 seconds, but its size,
+its exact timing and even its shape vary a good deal from person to
+person. Skulls differ in thickness, the folds of the cortex differ, and
+people differ in how they do the task. The participant you have been
+working with (number 1) is just one of these lines.
+
+So a difference between two conditions in one participant leaves a
+question open: is this how brains respond, or how this brain responds?
+
+## The group average
+
+Give `plot_compare_evokeds` the two lists and it averages over
+participants and draws a band around each line. The band shows how
+much the participants vary: a narrow band means they agree.
+
+```{python}
+mne.viz.plot_compare_evokeds({"wide": wide, "narrow": narrow}, picks="Oz");
+```
+
+The difference at 0.1 seconds that we saw in one participant is there
+in the group average too: the line for narrow stripes dips while the
+line for wide stripes climbs.
+
+The bands overlap a great deal, though. That is because they show how
+much people differ from *each other*, which we have just seen is a lot.
+They do not show what we care about: whether, *within* each person,
+wide and narrow differ in the same direction. For that we need each
+participant's own difference.
+
+## One number per participant
+
+A picture is not a test. The usual next step is to reduce each
+participant to one number per condition, and compare those.
+
+A common choice is the **mean amplitude**: the average voltage at a
+chosen electrode over a chosen stretch of time. We take `Oz` between
+0.08 and 0.13 seconds, the first visual response.
+
+```{python}
+import pandas as pd
+
+def mean_amplitude(erp, channel, start, end):
+    return erp.copy().pick(channel).crop(start, end).data.mean() * 1e6
+
+table = pd.DataFrame({"wide": [mean_amplitude(erp, "Oz", 0.08, 0.13) for erp in wide],
+                      "narrow": [mean_amplitude(erp, "Oz", 0.08, 0.13) for erp in narrow]})
+table["difference"] = table["wide"] - table["narrow"]
+table.round(1)
+```
+
+Each row is a participant, in microvolts. Look down the `difference`
+column. It is positive for nine of the ten: nearly everyone shows a
+more positive response to wide stripes, though the size ranges from
+almost nothing to more than five microvolts.
+
+That consistency is the evidence. The standard way to put a number on
+it is a **paired t-test**, which asks whether the average difference is
+large compared with how much the differences vary from person to
+person.
+
+```{python}
+from scipy import stats
+
+result = stats.ttest_rel(table["wide"], table["narrow"])
+print("t =", round(result.statistic, 2), "  p =", round(result.pvalue, 4))
+```
+
+The **p-value** is the number to read first. Roughly, it is how often a
+difference this consistent would turn up if stripe width in fact made
+no difference. Here it is less than one in a hundred, well under the
+conventional threshold of 0.05. The effect of stripe width on the
+early visual response holds across the group.
+
+Notice what the unit of evidence was. Each participant had about two
+hundred trials in each average, but they contributed *one number* each.
+The test has ten data points, not thousands. More trials make each
+participant's number more precise; only more participants tell you
+whether the effect is general [@boudewyn2018].
+
+## The feedback effect
+
+Now the same for the feedback-related negativity. In chapter 4 we
+looked at `FCz` between about 0.2 and 0.35 seconds, expecting the
+response to incorrect feedback to be more negative.
+
+```{python}
+correct = [mne.read_evokeds(file, condition="feedback-correct") for file in files]
+incorrect = [mne.read_evokeds(file, condition="feedback-incorrect") for file in files]
+
+mne.viz.plot_compare_evokeds({"correct": correct, "incorrect": incorrect}, picks="FCz");
+```
+
+```{python}
+table = pd.DataFrame({"correct": [mean_amplitude(erp, "FCz", 0.2, 0.35) for erp in correct],
+                      "incorrect": [mean_amplitude(erp, "FCz", 0.2, 0.35) for erp in incorrect]})
+table["difference"] = table["correct"] - table["incorrect"]
+print(table.round(1))
+
+result = stats.ttest_rel(table["correct"], table["incorrect"])
+print("t =", round(result.statistic, 2), "  p =", round(result.pvalue, 4))
+```
+
+This time the differences go both ways, and the test finds nothing.
+
+The plot shows why. At about a quarter of a second the incorrect line
+does dip below the correct one, as in chapter 4. But straight after,
+it rises above. Our stretch of time spans both, and the two cancel in
+the mean.
+
+::: {.callout-tip}
+## Try it
+Change both `0.35`s to `0.3`, so that the stretch ends before the
+lines cross, and run the cell again. What happens to the p-value?
+:::
+
+If you tried that, you found the result changes from nothing to
+something. This is worth pausing on, because it is one of the main
+ways EEG research goes wrong. There are many reasonable electrodes and
+many reasonable stretches of time. Try enough of them after seeing the
+data and one will give a p-value under 0.05, whether or not the effect
+is real [@luck2017].
+
+The honest position on what we have here: there is a dip at the
+expected place and time in the group average, the test on the stretch
+we chose beforehand does not support it, and a narrower stretch chosen
+*after looking* does. That is a hint, not a finding. Settling it would
+take a stretch of time fixed in advance from the literature, and more
+than ten participants.
+
+## What a full analysis adds
+
+- **Choices fixed in advance.** Electrodes and time windows are taken
+  from earlier studies, or written down before the data are examined.
+- **Tests over the whole time course.** There are methods that test
+  every time point and electrode at once while accounting for the
+  number of tests, so that no window has to be chosen. The most widely
+  used is the cluster-based permutation test [@maris2007].
+- **More participants.** Ten is small. With few participants only large
+  and consistent effects, like stripe width, can be detected.
+
+## Summary
+
+- One participant shows what can happen. A group shows what generally
+  happens.
+- People's ERPs differ a lot. That variation is what a group test is
+  measured against.
+- Reduce each participant to one number per condition, then compare
+  across participants. The participants are the data points.
+- A choice of electrode or time window made after seeing the data
+  cannot be trusted in the same way as one made before.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+Every analysis is run separately for each participant and each visit,
+and conclusions are drawn only from tests across participants. Where
+an effect is examined over time, the tests cover the whole time course
+with a correction for the number of time points, and the settings of
+each analysis are fixed in the script before it is run on the full
+dataset.
+:::

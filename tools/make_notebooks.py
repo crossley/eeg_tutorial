@@ -38,15 +38,20 @@ def colab_url(stem):
 def files_read_by(text):
     """Data files a chapter reads: the paths it names, and every group file if it uses the group folder."""
     files = [f for f in MANIFEST.file if f in text]
+    # A path written with {visit} inside a loop over a list of visits.
+    visits = re.search(r"for visit in \[([\d, ]+)\]", text)
+    if visits:
+        for visit in visits.group(1).split(","):
+            files += [f for f in MANIFEST.file if f.replace(f"visit-{visit.strip()}_", "visit-{visit}_") in text]
     if '"group' in text or "/group" in text:
         files += [f for f in MANIFEST.file if f.startswith("group/")]
     return sorted(set(files))
 
 
-def setup_cell(files):
+def setup_cell(files, packages):
     megabytes = MANIFEST[MANIFEST.file.isin(files)].bytes.sum() / 1e6
     lines = [f"# Run this cell first. It installs MNE and downloads this chapter's data (about {megabytes:.0f} MB).",
-             "!pip -q install mne",
+             f"!pip -q install {packages}",
              "",
              "import urllib.request",
              "from pathlib import Path",
@@ -95,7 +100,8 @@ def convert(chapter):
              f"The page, with its references, is at {SITE}/chapters/{chapter.stem}.html\n\n"
              "Run the cells from the top, in order (Shift+Enter runs a cell and moves to the next).")
     notebook.cells.append(nbformat.v4.new_markdown_cell(intro))
-    notebook.cells.append(nbformat.v4.new_code_cell(setup_cell(files_read_by(text))))
+    packages = "mne mne-connectivity" if "mne_connectivity" in text else "mne"
+    notebook.cells.append(nbformat.v4.new_code_cell(setup_cell(files_read_by(text), packages)))
     for index, piece in enumerate(pieces):
         if index % 2 == 0:
             if tidy_markdown(piece):

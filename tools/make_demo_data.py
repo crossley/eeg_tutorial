@@ -15,7 +15,8 @@ Three tiers, all from one experiment:
   sub-01/epochs/  the cleaned stimulus-locked epochs of every visit, and
                   the feedback-locked epochs of visit 1
   group/          each participant's average response per visit and
-                  category
+                  category, and for the first visit their averages by
+                  stripe width and by feedback
 
 De-identification is by allow-list: only the channels, metadata columns
 and behaviour columns named below are copied, every file is written
@@ -57,6 +58,8 @@ PULSE_S = 0.01  # length of each trigger pulse written to Status
 VISITS = [1, 2, 3, 4, 5]
 
 BEHAVIOUR_COLUMNS = ["trial", "phase", "cat", "x", "y", "resp", "fb", "rt"]
+WIDE, NARROW = "x < 40", "x > 60"  # stripe width, as split in chapter 4
+
 METADATA_COLUMNS = ["trial", "phase", "cat", "x", "y", "resp", "fb", "rt"]
 
 
@@ -179,6 +182,23 @@ def build_group():
                 evokeds.append(evoked)
         mne.write_evokeds(out / f"{label}_stim-ave.fif", evokeds, overwrite=True, verbose="ERROR")
 
+        # First visit only: the two contrasts of chapter 4, for the group chapter.
+        stimulus = read_epochs(code, RAW_VISIT)
+        if stimulus is None:
+            continue
+        feedback = read_epochs(code, RAW_VISIT, lock="FB")
+        stimulus.interpolate_bads(verbose="ERROR")
+        feedback.interpolate_bads(verbose="ERROR")
+        evokeds = []
+        for comment, epochs, query in [("wide", stimulus, WIDE), ("narrow", stimulus, NARROW),
+                                       ("feedback-correct", feedback, "fb == 'Correct'"),
+                                       ("feedback-incorrect", feedback, "fb == 'Incorrect'")]:
+            evoked = epochs[query].average()
+            evoked.comment = comment
+            evokeds.append(evoked)
+        mne.write_evokeds(out / f"{label}_visit-{RAW_VISIT}-ave.fif", evokeds, overwrite=True,
+                          verbose="ERROR")
+
 
 def scan_for_identifiers():
     """Fail if any output file carries a lab code, a date or a source path."""
@@ -196,7 +216,7 @@ def scan_for_identifiers():
         if path.suffix in (".csv", ".md", ".txt"):
             found = text.search(data.decode())
             assert found is None, f"{path}: contains {found.group()!r}"
-        if path.name.endswith(("_raw.fif", "-epo.fif", "-ave.fif")):
+        if path.suffix == ".fif":
             info = mne.io.read_info(path, verbose="ERROR")
             assert info["meas_date"] is None, f"{path}: carries a recording date"
             assert not info["subject_info"], f"{path}: carries subject information"

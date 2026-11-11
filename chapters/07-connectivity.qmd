@@ -1,0 +1,187 @@
+---
+title: "Connectivity"
+---
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/07-connectivity.ipynb)
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("ERROR")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+::: {.callout-note}
+## An advanced chapter
+This chapter and the next cover methods the lab uses that go beyond a
+first course in EEG. Read them once you are comfortable with chapters
+1 to 6.
+:::
+
+So far every analysis has looked at electrodes one at a time, or at
+the pattern across them at one moment. **Connectivity** asks a
+different question: does the activity at one place on the head keep in
+step with the activity at another? The interest is that brain areas
+which work together are thought to coordinate their rhythms
+[@fries2005].
+
+This is the area of EEG analysis where it is easiest to fool yourself,
+and most of this page is about one particular trap and the standard
+way round it. @bastos2016 is a thorough guide to the rest.
+
+## Rhythms in step
+
+Go back to the eyes-closed rest recording from chapter 5, clean it in
+the same way, and this time keep only the alpha rhythm, 8 to 13 Hz.
+
+```{python}
+from pathlib import Path
+import mne
+
+data = Path("data/eeg_tutorial_data_v1")
+layout = mne.channels.make_standard_montage("biosemi64")
+
+rest = mne.io.read_raw_fif(data / "sub-01/raw/sub-01_visit-1_rest_raw.fif", preload=True)
+rest.rename_channels(dict(zip(rest.ch_names[:64], layout.ch_names)))
+rest.set_montage(layout)
+rest.set_eeg_reference("average")
+rest.filter(8, 13)
+
+rest.plot(start=20, duration=1.5, picks=["POz", "Oz", "Fz"], scalings=dict(eeg=20e-6), decim=1, show_scrollbars=False);
+```
+
+Look at `POz` and `Oz`, both at the back of the head. Their waves rise
+and fall together, peak for peak. They are **in step**, or in the
+jargon, *phase-locked*. Now look at `Fz`, at the front. It is in step
+too, but upside down: when the back goes up, the front goes down.
+
+It is tempting to say that these three places are "connected".
+
+## Measuring it: coherence
+
+The classic measure of how well two signals keep in step at a given
+frequency is **coherence**. It runs from 0, no consistent relationship,
+to 1, perfectly in step.
+
+We compute it on the cleaned task epochs from chapter 4, in the alpha
+band, for every pair of electrodes.
+
+```{python}
+from mne_connectivity import spectral_connectivity_epochs
+
+epochs = mne.read_epochs(data / "sub-01/epochs/sub-01_visit-1_stim-epo.fif")
+epochs.interpolate_bads()
+
+connectivity = spectral_connectivity_epochs(epochs, method=["coh", "wpli2_debiased"],
+                                            fmin=8, fmax=13, faverage=True)
+```
+
+The result for each method is a table with 64 rows and 64 columns: one
+number for every pair of electrodes. The next lines pull out the
+coherence table. To look at it, we pick one electrode, the **seed**,
+and map its coherence with every other electrode.
+
+```{python}
+coherence = connectivity[0].get_data("dense")[:, :, 0]
+coherence = coherence + coherence.T
+
+seed = epochs.ch_names.index("POz")
+mne.viz.plot_topomap(coherence[seed], epochs.info, cmap="Reds", vlim=(0, 1), size=3);
+```
+
+Dark red means coherence near 1 with `POz`. There are two dark regions:
+one around `POz`, and one across the whole front of the head, with a
+pale band between. (The pale dot at `POz` itself is only because an
+electrode is not compared with itself.)
+
+## The trap: one source, many electrodes
+
+Does this mean the back of the head is talking to the front? Almost
+certainly not, and chapter 1 already said why. The signal from any one
+patch of cortex is smeared across the scalp, so a single source of
+alpha at the back of the head is picked up by *all* the electrodes near
+it at the same instant. They are in step because they are recording
+the same thing. And since a patch of cortex acts like a small battery
+with two ends, electrodes on the far side of the head see the same
+source upside down. That is the mirror-image wave at `Fz`.
+
+So one source, with no communication between anything, produces high
+coherence nearby *and* high coherence far away. This is called
+**volume conduction**, and it makes coherence at the scalp very hard to
+interpret [@nolte2004; @bastos2016].
+
+## A way round it: the weighted phase lag index
+
+Volume conduction has a signature. Electricity crosses the head
+instantly, so signals from a shared source arrive at two electrodes
+with **no delay**: exactly in step, or exactly upside down. Real
+communication between two brain areas takes time, because signals have
+to travel along nerve fibres, so one area should consistently *lead*
+the other by a fraction of a cycle.
+
+The **weighted phase lag index (wPLI)** uses this. It asks only whether
+one signal consistently leads or lags the other, and gives no credit
+for being exactly in step [@stam2007; @vinck2011]. We already computed
+it above, alongside coherence.
+
+```{python}
+wpli = connectivity[1].get_data("dense")[:, :, 0]
+wpli = wpli + wpli.T
+
+mne.viz.plot_topomap(wpli[seed], epochs.info, cmap="Reds", vlim=(0, 0.7), size=3);
+```
+
+Same seed, same data, same band, and a different picture. The region
+around `POz` and the whole front of the head, which coherence painted
+dark, are now pale: their relationship with `POz` had no delay, so
+wPLI disregards it. What is left is a region at the back on the right
+whose alpha rhythm keeps a consistent lead or lag with `POz`.
+
+That pattern is a much better candidate for something happening
+between brain areas. It is still only a candidate.
+
+::: {.callout-tip}
+## Try it
+Change the seed from `"POz"` to `"Fz"` and redraw both maps. Then
+change the band to theta by setting `fmin=4, fmax=8` in the call to
+`spectral_connectivity_epochs`. Do the coherence maps always show the
+"near and far" pattern? Do the wPLI maps change more from band to band?
+:::
+
+## What wPLI does not tell you
+
+- **It throws away real connections with no delay.** If two areas
+  really are coordinated with no lag, wPLI ignores them along with the
+  volume conduction. It trades missed connections for fewer false
+  ones [@vinck2011].
+- **It says nothing about direction or cause.** A consistent lag shows
+  that two signals are related, not that one area drives the other.
+- **It is about electrodes, not brain areas.** We are still at the
+  scalp. "`POz` and `P6`" does not translate into two named parts of
+  the cortex.
+- **It needs many trials.** Like decoding scores, these values are
+  noisy when computed from few epochs.
+
+## Summary
+
+- Connectivity measures ask whether rhythms at two places keep in step.
+- One source reaches many electrodes at once, so electrodes are in
+  step for reasons that have nothing to do with communication. This is
+  volume conduction.
+- Volume conduction has no delay. Measures such as wPLI count only
+  consistent leads and lags, and so are much less affected by it.
+- Even then, a connectivity value is a statistical relationship between
+  two electrodes, to be interpreted with care.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+The lab uses this same debiased wPLI, in the theta, alpha and beta
+bands, computed between all pairs of the 64 electrodes. Two things are
+added. It is computed in short steps of time through the epoch, to see
+how the pattern of connections changes after the stimulus. And as a
+check it is repeated after subtracting the average response (the ERP)
+from every trial, because the ERP itself is in step from trial to trial
+and can masquerade as connectivity. The whole pattern of connections is
+then compared between one part of the experiment and another, which is
+the subject of the next chapter.
+:::

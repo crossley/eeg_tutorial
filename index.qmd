@@ -35,7 +35,8 @@ The full dataset is about a terabyte. The tutorial uses a small subset
   plus one minute of rest with eyes closed;
 - the same participant's **cleaned trials** from all five visits, cut
   around each stimulus, and from the first visit cut around the feedback;
-- **average responses** from eleven participants.
+- **average responses** from the other participants, for the last
+  chapter.
 
 All of it is de-identified: participants are `sub-01` to `sub-11`, and
 recording dates have been removed.
@@ -48,6 +49,6 @@ recording dates have been removed.
 4. [The brain's response to a stimulus](chapters/04-erps.qmd): averaging, reading an ERP, comparing conditions
 5. [Brain rhythms](chapters/05-rhythms.qmd): the power spectrum, alpha, how rhythms change within a trial
 6. [Decoding](chapters/06-decoding.qmd): can a classifier tell what the participant saw?
-7. Connectivity between electrodes, advanced *(to come)*
-8. Comparing one visit with another, advanced *(to come)*
-9. From one participant to a group *(to come)*
+7. [Connectivity](chapters/07-connectivity.qmd) (advanced): do rhythms at two places keep in step?
+8. [Comparing one stretch of the experiment with another](chapters/08-comparing-visits.qmd) (advanced): similarity matrices
+9. [From one participant to a group](chapters/09-group.qmd): why one person is not a result, and a simple test across people

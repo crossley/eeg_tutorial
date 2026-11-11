@@ -93,7 +93,7 @@ signal is at each electrode (the darker, the larger):
 
 ```{python}
 scalp = raw.copy().pick("eeg")
-mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds");
+mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds", size=3);
 ```
 
 There is a pale patch at the back on the left, around `PO3`, where the
@@ -110,7 +110,7 @@ which favours no one place [@bertrand1985].
 raw.set_eeg_reference("average")
 
 scalp = raw.copy().pick("eeg")
-mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds");
+mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds", size=3);
 ```
 
 The pale patch has gone: `PO3` now has a signal like its neighbours,

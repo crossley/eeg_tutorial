@@ -14,10 +14,10 @@ book:
     - chapters/04-erps.qmd
     - chapters/05-rhythms.qmd
     - chapters/06-decoding.qmd
+    - chapters/07-connectivity.qmd
+    - chapters/08-comparing-visits.qmd
+    - chapters/09-group.qmd
     - references.qmd
-  # To come, in this order:
-  #   07 connectivity (advanced), 08 comparing sessions (advanced),
-  #   09 from one participant to a group
 
 bibliography: references.bib
 

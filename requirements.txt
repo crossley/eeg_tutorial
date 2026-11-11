@@ -1,7 +1,9 @@
 # What the tutorial pages need. Versions are those the pages were last run with.
 mne==1.11.0
+mne-connectivity
 numpy
 pandas
 matplotlib
 scikit-learn
+scipy
 jupyter
