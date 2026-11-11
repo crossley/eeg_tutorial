@@ -117,21 +117,15 @@ facing and on the reference. What matters is when a peak occurs, where
 on the scalp, and how it changes between conditions.
 :::
 
-## Comparing conditions: predict first, then look
+## Comparing conditions
 
 An ERP on its own says "the brain responded". Experiments are about
 differences: does the response change with what was shown, or with
 what happened to the participant?
 
-There is a trap here. We have 64 electrodes and hundreds of time
-points. Compare any two sets of trials and *somewhere* in all of that
-the two averages will differ, by chance alone. If you look first and
-then report the place where the difference is biggest, you will always
-find something, and it will usually be nothing.
-
-The defence is to decide **where** and **when** to look before looking,
-from what is already known about the brain. The next two examples do
-that. The third shows what happens when you do not.
+With 64 electrodes and hundreds of time points there is a lot to look
+at, so it helps to have some idea of where and when a difference is
+likely before plotting. The three examples below each start from that.
 
 ### Example 1: a difference in the stimulus
 
@@ -140,8 +134,9 @@ table: low numbers are wide stripes, high numbers are narrow). Neurons
 in visual cortex are tuned to stripe width, so wide and narrow stripes
 drive different sets of them.
 
-**Prediction.** *Where:* visual cortex is at the very back of the head,
-under `Oz`. *When:* the first visual response, around 0.1 seconds.
+Visual cortex is at the very back of the head, under `Oz`, and we saw
+above that its first response comes at around 0.1 seconds. So that is
+a sensible place and time to look.
 
 The trial table lets us pick out any set of epochs by describing it.
 
@@ -154,7 +149,7 @@ mne.viz.plot_compare_evokeds({"wide": wide, "narrow": narrow}, picks="Oz");
 ```
 
 The two lines are together before the stimulus and split apart at 0.1
-seconds, exactly when predicted: wide stripes send the voltage up,
+seconds, right at the first visual response: wide stripes send the voltage up,
 narrow stripes send it sharply down. They stay apart until about 0.45
 seconds and then come back together. At its largest the split is about
 seven microvolts, many times larger than any wobble in the stretch before
@@ -168,10 +163,9 @@ difference = mne.combine_evoked([wide, narrow], weights=[1, -1])
 difference.plot_topomap(times=[0.105], size=3);
 ```
 
-The difference sits at the back of the head, as predicted, and is close
-to nothing elsewhere. This is what a real effect looks like: it is
-where and when you said it would be, and it is large compared with the
-noise.
+The difference sits at the back of the head and is close to nothing
+elsewhere. This is what a clear effect looks like: it is where and when
+it makes sense for it to be, and it is large compared with the noise.
 
 ### Example 2: a difference in what the participant learns
 
@@ -189,8 +183,8 @@ stimulus, but the moment the feedback appeared. In this task the
 feedback was a ring around the stimulus, green for correct and red for
 incorrect.
 
-**Prediction.** *Where:* `FCz`, front and centre. *When:* between 0.2
-and 0.35 seconds after the feedback.
+From that literature, the place to look is `FCz`, front and centre,
+between about 0.2 and 0.35 seconds after the feedback.
 
 ```{python}
 feedback = mne.read_epochs(eegtut.feedback_epochs_file())
@@ -205,14 +199,15 @@ mne.viz.plot_compare_evokeds({"correct": correct, "incorrect": incorrect}, picks
 
 Time zero is now the moment the ring appeared. At about a quarter of a
 second the line for incorrect feedback dips well below the one for
-correct feedback, by about four microvolts. That is the predicted
-effect, where and when we said.
+correct feedback, by about four microvolts. That is the
+feedback-related negativity, where and when the literature says to
+expect it.
 
-Straight afterwards the incorrect line shoots up above the other. That
-is a separate, later wave: the P3 from earlier on this page, which is
-typically larger for events that are rarer or more surprising, and
-incorrect feedback was the rarer kind here. We did not predict it, so
-we note it and claim nothing.
+Straight afterwards the incorrect line rises above the other. This may
+be a later wave like the P3 from earlier on this page, which is often
+larger for events that are rarer or more surprising, and incorrect
+feedback was the rarer kind here. That is one plausible reading of one
+participant, not a conclusion.
 
 Now map the difference over the scalp, as before:
 
@@ -221,9 +216,9 @@ difference = mne.combine_evoked([correct, incorrect], weights=[1, -1])
 difference.plot_topomap(times=[0.26], size=3);
 ```
 
-There is the difference at the front and centre that we predicted. But
-there is also a large one at the very back of the head, which we did
-not predict. What is that?
+There is the difference at the front and centre that we were looking
+for. But there is also a large one at the very back of the head. What
+is that?
 
 Think about what differed between the two kinds of trial. It was not
 only the *meaning* of the feedback. One ring was green and the other
@@ -245,8 +240,8 @@ advance.
 ### Example 3: a difference you should not believe
 
 Back to the epochs around the stimulus. Split them by whether the
-participant went on to answer correctly, and look at `Pz`, with no
-prediction at all:
+participant went on to answer correctly, and look at `Pz`, this time
+with no particular reason to expect anything there:
 
 ```{python}
 right = epochs["fb == 'Correct'"].average()

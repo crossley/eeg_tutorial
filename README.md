@@ -49,8 +49,10 @@ then download it on first use.
 - Exercises change a number and rerun. They never ask for new code.
 - Teach the method on one participant. No findings from the lab's
   unpublished work.
-- Motivate every comparison before showing it: say where and when an
-  effect is expected and why, then look. Prefer well-known effects.
+- Give a short rationale for each comparison before showing it: what we
+  might see, where and when, and why. Keep it light; the aim is
+  familiarity, not formal hypothesis testing. Prefer well-known effects,
+  and interpret cautiously.
 - Check every number and description in the prose against the figure the
   code actually produces.
 - End each page with how the lab's real pipeline does the same step.
