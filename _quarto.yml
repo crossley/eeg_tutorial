@@ -1,0 +1,29 @@
+project:
+  type: book
+  output-dir: _site
+  execute-dir: project  # so that pages can import eegtut
+
+book:
+  title: "EEG from the recording up"
+  subtitle: "A hands-on introduction using the lab's category-learning data"
+  chapters:
+    - index.qmd
+    - chapters/02-raw-data.qmd
+  # To come, in this order:
+  #   03 preprocessing, 04 ERPs, 05 rhythms, 06 decoding,
+  #   07 connectivity (advanced), 08 comparing sessions (advanced),
+  #   09 from one participant to a group
+
+# Pages are executed on a machine that has the demo data; the results are
+# stored in _freeze/ and committed, so the site can be rendered anywhere.
+execute:
+  freeze: auto
+  warning: false
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-tools: true
+    fig-width: 8
+    fig-height: 4.5

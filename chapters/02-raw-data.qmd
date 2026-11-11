@@ -1,0 +1,251 @@
+---
+title: "The raw recording"
+---
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("WARNING")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+This page opens one EEG recording and looks at what is in it, before
+anything has been cleaned. By the end you should be able to say:
+
+- what a recording file contains,
+- where each electrode sits on the head,
+- how the recording knows when each stimulus appeared, and
+- how to check that the recording and the task's own trial list agree.
+
+You do not need to write code. Run each cell, read what comes out, and
+try the changes suggested under **Try it**.
+
+## The recording
+
+The participant sat in front of a screen wearing a cap of 64
+electrodes. On each trial a striped disc appeared; they pressed one of
+two keys to say whether it was an "A" or a "B", and were told whether
+they were right. The file below holds the first 100 trials of their
+first visit, about six minutes.
+
+```{python}
+import mne
+import eegtut
+
+raw = mne.io.read_raw_fif(eegtut.raw_task_file(), preload=True)
+print(raw.info["sfreq"], "samples per second")
+print(len(raw.ch_names), "channels")
+print(round(raw.times[-1]), "seconds")
+```
+
+An EEG recording is a table of numbers. Each **channel** is one row: the
+voltage at one electrode, measured again and again. The **sampling rate**
+says how often: 512 times a second here. So six minutes of 67 channels
+is about 12 million numbers.
+
+The channels are not all scalp electrodes:
+
+```{python}
+print(raw.ch_names)
+```
+
+- `A1` to `A32` and `B1` to `B32` are the 64 scalp electrodes. The names
+  are the sockets on the amplifier, not places on the head. We fix that
+  below.
+- `EXG1` and `EXG2` are two extra electrodes stuck on the face, beside
+  and below the left eye. They pick up eye movements and blinks, which
+  we will need in the next chapter.
+- `Status` is not a voltage from the body at all. It is the **trigger
+  channel**, explained further down.
+
+## Looking at the signal
+
+Always look at the raw signal before doing anything else. Here are ten
+seconds from ten electrodes.
+
+```{python}
+raw.plot(start=100, duration=10, picks=["A1", "A5", "A13", "A21", "A28", "B1", "B5", "B13", "B21", "B28"],
+         scalings=dict(eeg=40e-6), show_scrollbars=False);
+```
+
+Each trace is one electrode; time runs left to right. Two things to
+notice.
+
+**The signals are tiny.** The scale bar is 80 microvolts (millionths of
+a volt). Brain signals at the scalp are a few tens of microvolts,
+thousands of times smaller than the heartbeat signal on an ECG.
+
+**Much of what you see is not brain activity.** The fast fuzz on every
+trace is mostly interference from the building's mains wiring. The
+large bumps between 102 and 104 seconds, biggest on `A1` and `B1`, are
+blinks: those two electrodes sit on the forehead, just above the eyes.
+Chapter 3 is about removing both.
+
+::: {.callout-tip}
+## Try it
+Change `start=100` to another time (anything from 0 to 350) and run the
+cell again. Find a moment where one big deflection appears on several
+channels at once.
+:::
+
+## Where the electrodes are
+
+The cap follows a standard layout. Telling the software which layout
+gives each channel a proper name and a position on the head.
+
+```{python}
+layout = mne.channels.make_standard_montage("biosemi64")
+raw.rename_channels(dict(zip(raw.ch_names[:64], layout.ch_names)))
+raw.set_montage(layout)
+raw.plot_sensors(show_names=True);
+```
+
+This is the head seen from above, nose at the top. The names follow a
+rule worth learning:
+
+- The letter is the region: **F** frontal, **C** central, **P** parietal,
+  **O** occipital (the back of the head, over visual cortex), **T**
+  temporal (above the ears).
+- **Odd numbers are on the left, even numbers on the right**, and **z**
+  ("zero") is the midline.
+
+So `Oz` is at the back in the middle, and `F3` is at the front on the
+left. Our stimulus is visual, so expect the earliest brain responses
+around `Oz`, `O1` and `O2`.
+
+## Triggers: how the recording knows what happened when
+
+The EEG amplifier knows nothing about the task. To link the two, the
+task computer sends a short pulse down a cable every time something
+happens, and the amplifier records it alongside the brain signals in
+the `Status` channel. The size of the pulse is a code for what
+happened. These pulses are called **triggers** (or event markers).
+
+```{python}
+events = mne.find_events(raw, stim_channel="Status")
+print(len(events), "triggers")
+print(events[:8])
+```
+
+Each row is one trigger. The first number is *when* (counted in
+samples from the start of the file), and the last is the *code*. Ignore
+the middle one. For this task the codes mean:
+
+```{python}
+codes = {"trial start": 11,
+         "stimulus A": 20, "stimulus B": 28,
+         "response A": 30, "response B": 31,
+         "feedback correct": 40, "feedback wrong": 41}
+```
+
+Here are the first 20 seconds of triggers, one row per kind of event.
+
+```{python}
+first = events[events[:, 0] < 20 * raw.info["sfreq"]]
+mne.viz.plot_events(first, sfreq=raw.info["sfreq"], event_id=codes, on_missing="ignore");
+```
+
+Read it from left to right and you can see the task: a trial starts, a
+stimulus appears, the participant responds, feedback follows, and it
+all repeats about every three and a half seconds.
+
+::: {.callout-note}
+## Why this matters
+Everything later in the tutorial depends on triggers. To see the
+brain's response to a stimulus we cut out the signal around each
+stimulus trigger and average those pieces. If the triggers are wrong,
+every result after them is wrong, and nothing will warn you.
+:::
+
+## Check the recording against the task's own records
+
+The task program also saved a table with one row per trial.
+
+```{python}
+import pandas as pd
+
+trials = pd.read_csv(eegtut.behaviour_file())
+trials.head()
+```
+
+`cat` is the stimulus's true category, `resp` is what the participant
+answered, `fb` the feedback they saw and `rt` the reaction time in
+milliseconds. (`x` and `y` describe the stimulus: how wide its stripes
+were and how tilted.)
+
+We now have two independent records of the same session. They should
+agree. First check: is there one stimulus trigger per trial, and does
+its code match the trial's category?
+
+```{python}
+stimuli = events[(events[:, 2] == 20) | (events[:, 2] == 28)]
+trials["trigger"] = stimuli[:, 2]
+pd.crosstab(trials["cat"], trials["trigger"])
+```
+
+Every category-A trial has code 20 and every category-B trial has code
+28, with nothing in the other corners. Good.
+
+Second check: the triggers give us our own measure of reaction time,
+the gap between the stimulus trigger and the response trigger. Does it
+match the `rt` the task program wrote down?
+
+```{python}
+responses = events[(events[:, 2] == 30) | (events[:, 2] == 31)]
+gap_ms = (responses[:, 0] - stimuli[:, 0]) / raw.info["sfreq"] * 1000
+(gap_ms - trials["rt"]).describe().round(1)
+```
+
+The two agree to within 20 milliseconds on every trial. The trigger gap
+is a little longer, by 9 ms on average; that small delay comes from the
+screen and the cable, and is normal. What would *not* be normal is a
+difference of hundreds of milliseconds, or one that grows over the
+session. That would mean the two records are out of step.
+
+::: {.callout-tip}
+## Try it
+Use the triggers to work out how many of these 100 trials the
+participant got right: count the triggers with code 40. Then check your
+answer against the table with `(trials["fb"] == "Correct").sum()`.
+:::
+
+## What is wrong with this recording
+
+Nothing unusual, but it is not ready to analyse. One plot shows two of
+the problems. It splits the signal by **frequency**: how much of it is
+slow waves, and how much is fast.
+
+```{python}
+raw.compute_psd(fmax=120, picks="eeg").plot(average=True);
+```
+
+- The sharp spike at **50 Hz** is the mains electricity (Australian
+  power lines alternate 50 times a second). It is the fuzz you saw on
+  the traces.
+- The steep rise at the far left is very slow **drift**: the voltage at
+  each electrode wandering over seconds as the skin and gel settle.
+
+Neither comes from the brain. The next chapter removes them, along with
+blinks, and turns this continuous recording into clean trials.
+
+One feature of this plot *is* brain activity: the bump at about 11 Hz.
+That is the **alpha rhythm**, the strongest rhythm in the human EEG. It
+gets its own chapter later.
+
+## Summary
+
+- A recording is channels by samples. Most channels are scalp
+  electrodes; some are helpers (eye electrodes, the trigger channel).
+- Electrode names tell you where they are: letter for region, odd for
+  left, even for right, z for the midline.
+- Triggers tie the brain recording to the task. Always check them
+  against the task's own trial table before going further.
+- Raw EEG is mostly not brain signal. Cleaning comes next.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+The full recordings are 40 minutes at 4096 samples per second, about
+2 GB per visit. The trigger check on this page is done for every
+recording by an audit script before any preprocessing is allowed to
+run, and a recording that fails it is not used.
+:::

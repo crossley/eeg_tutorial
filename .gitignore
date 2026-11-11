@@ -1,0 +1,19 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Never versioned: the key from tutorial labels to lab participant codes and
+# the paths of the source recordings.
+/private/
+
+# The demo dataset is built by tools/make_demo_data.py and published as a
+# release archive, not kept in git.
+/data/
+
+# Local tools and Quarto build products (_freeze/ IS versioned: it holds the
+# executed results the site is rendered from).
+/.tools/
+/.quarto/
+/_site/
+
+**/*.quarto_ipynb

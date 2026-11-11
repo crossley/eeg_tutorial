@@ -1,0 +1,46 @@
+---
+title: "Start here"
+---
+
+This tutorial teaches how EEG data are analysed in the lab, from the
+recording as it comes off the amplifier to the results. It uses a small
+piece of real data from one of the lab's experiments.
+
+It is about EEG, not about programming. Every page has working code,
+but you are not expected to write any: run it, read what comes out, and
+change a number when a **Try it** box suggests one.
+
+## The experiment
+
+On each trial a striped disc appeared on the screen. Its stripes varied
+in width and in tilt. The participant pressed one of two keys to say
+whether it was an "A" or a "B", and was told whether they were right.
+Nobody was told the rule; they learned it from the feedback, over five
+visits to the lab and thousands of trials. EEG was recorded from 64
+electrodes on the scalp throughout each visit.
+
+## The data
+
+The full dataset is about a terabyte. The tutorial uses a small subset
+(about 270 MB):
+
+- six minutes of **raw recording** from one participant's first visit,
+  exactly as recorded apart from being stored at a lower sampling rate,
+  plus one minute of rest with eyes closed;
+- the same participant's **cleaned trials** from all five visits;
+- **average responses** from eleven participants.
+
+All of it is de-identified: participants are `sub-01` to `sub-11`, and
+recording dates have been removed.
+
+## The chapters
+
+1. Start here (this page)
+2. [The raw recording](chapters/02-raw-data.qmd): what is in the file, electrodes, triggers
+3. Cleaning the recording: filtering, referencing, removing blinks, cutting into trials *(to come)*
+4. The brain's average response to a stimulus *(to come)*
+5. Brain rhythms *(to come)*
+6. Decoding: can a classifier tell what the participant saw? *(to come)*
+7. Connectivity between electrodes, advanced *(to come)*
+8. Comparing one visit with another, advanced *(to come)*
+9. From one participant to a group *(to come)*
