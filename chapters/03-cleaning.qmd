@@ -279,14 +279,14 @@ that every one of several hundred recordings is treated identically:
 
 - the same 0.5 to 40 Hz filter, then the data are stored at 256 samples
   per second;
-- bad channels are found by an algorithm (PyPREP, an implementation of
-  @bigdely2015) that also makes the average reference robust to them;
+- bad channels are found by an algorithm (PyPREP) that also makes the
+  average reference robust to them [@bigdely2015];
 - ICA keeps as many components as there are good channels, and blink
   and eye-movement components are chosen by their match to the eye
   electrodes, exactly as above;
-- bad epochs are repaired or dropped by an algorithm (AutoReject;
-  @jas2017) that learns a separate threshold for each channel, instead
-  of one fixed 100 microvolt limit.
+- bad epochs are repaired or dropped by an algorithm (AutoReject) that
+  learns a separate threshold for each channel, instead of one fixed
+  100 microvolt limit [@jas2017].
 
 The cleaned epochs you will use from the next chapter on were made this
 way. One difference worth knowing about: over this participant's whole

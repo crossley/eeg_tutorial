@@ -67,7 +67,7 @@ print(len(epochs), "trials,", len(epochs.times), "time points")
 Then the classifier. This is the one block of the tutorial you can
 treat as a recipe. It says: put the electrodes on a common scale, use
 a standard classifier (logistic regression, from the scikit-learn
-library; @pedregosa2011), and train and test a separate one at every
+library) [@pedregosa2011], and train and test a separate one at every
 time point, so that we find out not just whether the information is
 there but *when* [@king2014].
 

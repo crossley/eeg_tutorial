@@ -182,8 +182,8 @@ same direction, on every trial. A rhythm that gets weaker after the
 stimulus, like alpha here, is invisible in an ERP, because its peaks
 and troughs fall at different moments on different trials and average
 to nothing. Time-frequency analysis measures the *strength* of the
-rhythm on each trial before averaging, so it survives
-[@tallonbaudry1999; @cohen2014]. Neither view is better; they show
+rhythm on each trial before averaging, so it survives [@tallonbaudry1999; @cohen2014].
+Neither view is better; they show
 different things.
 :::
 

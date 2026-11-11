@@ -112,9 +112,9 @@ Read it as a sequence in time.
 
 ERP peaks are named by direction and order or timing: **P1** is the
 first positive peak, **N1** the first negative one, **P3** (or P300) a
-large positive wave around 0.3 seconds or later [@sutton1965;
-@polich2007]. You will see these names in every ERP paper; @luck2014
-is the standard guide to them.
+large positive wave around 0.3 seconds or later [@sutton1965; @polich2007].
+You will see these names in every ERP paper, and the standard guide to
+them is the textbook by @luck2014.
 
 ::: {.callout-warning}
 ## Positive and negative are not "more" and "less"
@@ -182,9 +182,9 @@ This one matters more to a lab that studies learning. About a quarter
 of a second after people are told they got something wrong, the ERP at
 the front and middle of the head is more negative than when they are
 told they got it right. This is one of the most studied effects in
-EEG, known as the **feedback-related negativity** [@miltner1997] (or,
-looking at it the other way up, the **reward positivity**;
-@proudfit2015). It is thought to reflect
+EEG, known as the **feedback-related negativity** [@miltner1997] or,
+looking at it the other way up, the **reward positivity**
+[@proudfit2015]. It is thought to reflect
 the brain's signal that an outcome was better or worse than expected,
 which is the signal that learning from feedback needs [@holroyd2002].
 
