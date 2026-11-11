@@ -58,3 +58,52 @@ def epochs_file(visit):
 def group_files():
     """Each participant's average responses, one file per participant."""
     return sorted((data_dir() / "group").glob("sub-*_stim-ave.fif"))
+
+
+def compare_traces(before, after, channels, start, duration=5, labels=("before", "after")):
+    """Draw the same stretch of the same channels from two recordings, one above the other."""
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(len(channels), 1, figsize=(8, 1.6 * len(channels) + 0.6), sharex=True,
+                             squeeze=False)
+    for ax, channel in zip(axes[:, 0], channels):
+        for raw, label, colour in zip((before, after), labels, ("0.6", "C0")):
+            first, last = raw.time_as_index([start, start + duration])
+            trace = raw.get_data(picks=[channel], start=first, stop=last)[0] * 1e6
+            ax.plot(raw.times[first:last], trace - trace.mean(), color=colour, lw=0.8, label=label)
+        ax.set_ylabel(f"{channel}\n(µV)")
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0, 0].legend(loc="lower right", bbox_to_anchor=(1, 1), ncols=2, frameon=False)
+    axes[-1, 0].set_xlabel("Time (s)")
+    fig.tight_layout()
+    return fig
+
+
+def channel_sizes(raw):
+    """Bar chart of how large the signal is at each scalp channel (standard deviation, µV)."""
+    import matplotlib.pyplot as plt
+    data = raw.get_data(picks="eeg") * 1e6
+    names = raw.copy().pick("eeg").ch_names
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.bar(range(len(names)), data.std(axis=1), color="C0")
+    ax.set_xticks(range(len(names)), names, rotation=90, fontsize=6)
+    ax.set_ylabel("Signal size (µV)")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def average_of_n(epochs, channel, counts):
+    """One panel per count: the average of that many epochs at one channel."""
+    import matplotlib.pyplot as plt
+    data = epochs.get_data(picks=[channel])[:, 0] * 1e6
+    fig, axes = plt.subplots(1, len(counts), figsize=(2.6 * len(counts), 2.8), sharex=True, sharey=True)
+    for ax, count in zip(axes, counts):
+        ax.plot(epochs.times, data[:count].mean(axis=0), color="C0", lw=1)
+        ax.axvline(0, color="0.5", lw=0.8, ls="--")
+        ax.axhline(0, color="0.5", lw=0.8)
+        ax.set_title(f"{count} trial" + ("s" if count > 1 else ""), fontsize=10)
+        ax.set_xlabel("Time (s)")
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0].set_ylabel(f"{channel} (µV)")
+    fig.tight_layout()
+    return fig

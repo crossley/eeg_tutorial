@@ -1,0 +1,183 @@
+---
+title: "The brain's response to a stimulus"
+---
+
+```{python}
+#| include: false
+import mne
+mne.set_log_level("WARNING")
+mne.viz.set_browser_backend("matplotlib")
+```
+
+The last page ended with an **event-related potential (ERP)**: the
+average of many epochs, showing what the brain does each time a
+stimulus appears. This page is about why averaging works, how to read
+the result, and how to compare two conditions.
+
+From here on we use the whole first visit, about 650 trials, already
+cleaned by the lab's pipeline in the way the last page described.
+
+```{python}
+import mne
+import eegtut
+
+epochs = mne.read_epochs(eegtut.epochs_file(visit=1))
+print(len(epochs), "epochs,", len(epochs.ch_names), "channels")
+print("from", epochs.tmin, "to", epochs.tmax, "seconds around each stimulus")
+```
+
+The trial table from chapter 2 now travels with the epochs, one row per
+epoch:
+
+```{python}
+epochs.metadata.head()
+```
+
+One housekeeping step. The pipeline marked one electrode as bad for
+this visit. We fill it in from its neighbours so that every plot has
+all 64 channels.
+
+```{python}
+print("bad:", epochs.info["bads"])
+epochs.interpolate_bads();
+```
+
+## Why we average
+
+Here is the signal at `PO8`, at the back of the head on the right, for
+a single trial, and then averaged over more and more trials. The dashed
+line is the moment the stimulus appeared.
+
+```{python}
+eegtut.average_of_n(epochs, "PO8", counts=[1, 10, 100, 600]);
+```
+
+In one trial there is nothing to see. The brain's response to the
+stimulus is there, but it is a few microvolts, buried in ongoing
+activity several times larger that has nothing to do with the stimulus.
+
+That unrelated activity is different on every trial: up on one, down on
+the next. The response to the stimulus is nearly the same every time.
+So when trials are averaged, the unrelated activity cancels and the
+response remains. With 10 trials a shape begins to show; with 100 it is
+clear; with 600 the line before the stimulus is almost perfectly flat.
+
+::: {.callout-note}
+## The price of a clean average
+The noise shrinks with the *square root* of the number of trials. To
+halve the noise you need four times as many trials. This is why EEG
+experiments have hundreds of trials per condition, and why you should
+be wary of an ERP built from twenty.
+:::
+
+::: {.callout-tip}
+## Try it
+Change `"PO8"` to `"Fz"` (front of the head). The response there has a
+different shape and is smaller. Does it take more trials before you can
+see it?
+:::
+
+## Reading an ERP
+
+The average over all epochs, at every electrode at once:
+
+```{python}
+erp = epochs.average()
+erp.plot_joint();
+```
+
+Each line is one electrode; its colour shows where it is on the head
+(the small coloured head is the key). The maps along the top show the
+whole scalp at the moments marked by the grey lines.
+
+Read it as a sequence in time.
+
+- **Before 0** the lines are flat. Nothing has happened yet, and the
+  baseline step set this stretch to zero.
+- **Just after 0.1 s** the first sharp peak appears, and the map shows
+  it at the back of the head. This is visual cortex registering that
+  something has appeared. It takes about a tenth of a second for the
+  signal to travel from the eye to the cortex.
+- **From about 0.3 s** a slower, broader wave takes over, largest
+  between 0.4 and 0.5 s over the back and middle of the head. This later
+  activity is less about the
+  eyes and more about what the participant does with the stimulus:
+  recognising it, deciding, preparing a response.
+
+ERP peaks are named by direction and order or timing: **P1** is the
+first positive peak, **N1** the first negative one, **P3** (or P300) a
+large positive wave around 0.3 seconds or later. You will see these
+names in every ERP paper.
+
+::: {.callout-warning}
+## Positive and negative are not "more" and "less"
+A positive peak does not mean more brain activity than a negative one.
+The sign depends on which way the active patch of cortex happens to be
+facing and on the reference. What matters is when a peak occurs, where
+on the scalp, and how it changes between conditions.
+:::
+
+## Comparing two conditions
+
+An ERP on its own says "the brain responded". Experiments are about
+differences: does the response change with what was shown, or with
+what the participant did?
+
+The trial table lets us pick out any set of epochs by describing it. As
+an example, compare trials the participant got right with trials they
+got wrong:
+
+```{python}
+correct = epochs["fb == 'Correct'"].average()
+wrong = epochs["fb == 'Incorrect'"].average()
+print(correct.nave, "correct trials,", wrong.nave, "wrong trials")
+
+mne.viz.plot_compare_evokeds({"correct": correct, "wrong": wrong}, picks="Pz");
+```
+
+The two lines have the same shape, and the one for correct trials runs
+a little higher for most of the epoch, by about one microvolt. Is that
+a real difference between getting it right and getting it wrong?
+
+Look at the stretch before time zero. Nothing can differ there, because
+the stimulus has not appeared yet, and still the orange line wobbles
+away from the blue one by more than half a microvolt. That wobble is
+what noise alone does to these averages, and the difference after the
+stimulus is not much bigger. So from this plot we cannot say.
+
+This is the habit to build: before believing a difference, ask how big
+a difference would turn up by chance. The stretch before the stimulus
+is a free look at the answer. A difference you can see in one
+participant is a reason to test it properly, not a result. Chapter 9 is
+about how to do that across participants.
+
+::: {.callout-tip}
+## Try it
+Compare the two categories instead: replace the two descriptions with
+`"cat == 'A'"` and `"cat == 'B'"`. The lines are much harder to tell
+apart. The brain must be treating A and B differently, since the
+participant can respond to them differently, but the difference is too
+subtle to see in an average at one electrode. Chapter 6 shows a more
+sensitive way to find it.
+:::
+
+## Summary
+
+- A single trial is mostly activity unrelated to the stimulus.
+  Averaging many trials cancels it and leaves the response.
+- Noise falls with the square root of the number of trials.
+- Read an ERP by when its peaks occur and where they are on the scalp.
+  Early peaks at the back of the head are visual; later, broader waves
+  reflect what is done with the stimulus.
+- The sign of a peak is not the amount of activity.
+- Science is in the comparison between conditions, and a visible
+  difference in one participant is where the work starts.
+
+::: {.callout-note collapse="true"}
+## In the lab's real pipeline
+ERPs are computed in the same way, per participant and per visit, and
+then compared across the five visits to ask how the response changes
+as the task is learned. The lab's scripts also build response-locked
+epochs, cut around the key press instead of the stimulus, which line up
+the activity leading to the response.
+:::

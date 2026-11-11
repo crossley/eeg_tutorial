@@ -9,8 +9,10 @@ book:
   chapters:
     - index.qmd
     - chapters/02-raw-data.qmd
+    - chapters/03-cleaning.qmd
+    - chapters/04-erps.qmd
   # To come, in this order:
-  #   03 preprocessing, 04 ERPs, 05 rhythms, 06 decoding,
+  #   05 rhythms, 06 decoding,
   #   07 connectivity (advanced), 08 comparing sessions (advanced),
   #   09 from one participant to a group
 

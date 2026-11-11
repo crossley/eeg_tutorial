@@ -37,8 +37,8 @@ recording dates have been removed.
 
 1. Start here (this page)
 2. [The raw recording](chapters/02-raw-data.qmd): what is in the file, electrodes, triggers
-3. Cleaning the recording: filtering, referencing, removing blinks, cutting into trials *(to come)*
-4. The brain's average response to a stimulus *(to come)*
+3. [Cleaning the recording](chapters/03-cleaning.qmd): filtering, referencing, removing blinks, cutting into trials
+4. [The brain's response to a stimulus](chapters/04-erps.qmd): averaging, reading an ERP, comparing conditions
 5. Brain rhythms *(to come)*
 6. Decoding: can a classifier tell what the participant saw? *(to come)*
 7. Connectivity between electrodes, advanced *(to come)*
