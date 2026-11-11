@@ -29,14 +29,20 @@ they were right. The file below holds the first 100 trials of their
 first visit, about six minutes.
 
 ```{python}
+from pathlib import Path
 import mne
-import eegtut
 
-raw = mne.io.read_raw_fif(eegtut.raw_task_file(), preload=True)
+data = Path("data/eeg_tutorial_data_v1")
+raw = mne.io.read_raw_fif(data / "sub-01/raw/sub-01_visit-1_task_raw.fif", preload=True)
 print(raw.info["sfreq"], "samples per second")
 print(len(raw.ch_names), "channels")
 print(round(raw.times[-1]), "seconds")
 ```
+
+The first lines say where the data are and load a library called
+MNE-Python [@gramfort2013], the free toolbox for EEG analysis that the
+whole tutorial uses. Everything you learn to do with it here you can do
+with your own data later.
 
 An EEG recording is a table of numbers. Each **channel** is one row: the
 voltage at one electrode, measured again and again. The **sampling rate**
@@ -72,8 +78,8 @@ Each trace is one electrode; time runs left to right. Two things to
 notice.
 
 **The signals are tiny.** The scale bar is 80 microvolts (millionths of
-a volt). Brain signals at the scalp are a few tens of microvolts,
-thousands of times smaller than the heartbeat signal on an ECG.
+a volt). Brain signals at the scalp are a few tens of microvolts at
+most [@luck2014], far smaller than the heartbeat signal on an ECG.
 
 **Much of what you see is not brain activity.** The fast fuzz on every
 trace is mostly interference from the building's mains wiring. The
@@ -101,7 +107,7 @@ raw.plot_sensors(show_names=True);
 ```
 
 This is the head seen from above, nose at the top. The names follow a
-rule worth learning:
+standard scheme [@oostenveld2001] with a rule worth learning:
 
 - The letter is the region: **F** frontal, **C** central, **P** parietal,
   **O** occipital (the back of the head, over visual cortex), **T**
@@ -164,7 +170,7 @@ The task program also saved a table with one row per trial.
 ```{python}
 import pandas as pd
 
-trials = pd.read_csv(eegtut.behaviour_file())
+trials = pd.read_csv(data / "sub-01/raw/sub-01_visit-1_task_behaviour.csv")
 trials.head()
 ```
 
@@ -229,8 +235,9 @@ Neither comes from the brain. The next chapter removes them, along with
 blinks, and turns this continuous recording into clean trials.
 
 One feature of this plot *is* brain activity: the bump at about 11 Hz.
-That is the **alpha rhythm**, the strongest rhythm in the human EEG. It
-gets its own chapter later.
+That is the **alpha rhythm**, the most prominent rhythm in the human EEG
+and the first to be described [@berger1929]. It gets its own chapter
+later.
 
 ## Summary
 

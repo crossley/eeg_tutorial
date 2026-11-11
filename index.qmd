@@ -8,7 +8,10 @@ piece of real data from one of the lab's experiments.
 
 It is about EEG, not about programming. Every page has working code,
 but you are not expected to write any: run it, read what comes out, and
-change a number when a **Try it** box suggests one.
+change a number when a **Try it** box suggests one. The code uses the
+standard free tools directly (MNE-Python for EEG, with a little NumPy,
+pandas and Matplotlib), so what you see here is what you would type
+for your own data.
 
 ## The experiment
 
@@ -16,7 +19,8 @@ On each trial a striped disc appeared on the screen. Its stripes varied
 in width and in tilt. The participant pressed one of two keys to say
 whether it was an "A" or a "B", and was told whether they were right.
 Nobody was told the rule; they learned it from the feedback, over five
-visits to the lab and thousands of trials. EEG was recorded from 64
+visits to the lab and thousands of trials. Tasks of this kind are a
+standard way to study how people learn categories [@ashby2005]. EEG was recorded from 64
 electrodes on the scalp throughout each visit.
 
 ## The data

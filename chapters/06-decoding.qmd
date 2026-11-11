@@ -13,7 +13,8 @@ In chapter 4 you compared the ERPs to category A and category B at one
 electrode and could hardly tell them apart. Yet the participant could
 tell A from B, so the information must be in the brain somewhere. This
 page introduces a more sensitive way of finding it, called **decoding**
-(or multivariate pattern analysis, MVPA).
+(or multivariate pattern analysis, MVPA). @grootswagers2017 is a good
+longer introduction.
 
 ## The idea
 
@@ -42,7 +43,7 @@ Testing on new trials is the whole point. A classifier scored on the
 trials it learned from can do well by memorising them, which tells us
 nothing. The standard routine, **cross-validation**, splits the trials
 into five parts, trains on four, tests on the fifth, and repeats so
-that each part takes a turn as the test.
+that each part takes a turn as the test [@varoquaux2017].
 
 The score we use (called AUC) runs from 0.5, which is guessing, to 1,
 which is perfect.
@@ -53,10 +54,11 @@ The same cleaned epochs as chapter 4, keeping the ordinary training
 trials. To keep things quick we keep every fourth time point.
 
 ```{python}
+from pathlib import Path
 import mne
-import eegtut
 
-epochs = mne.read_epochs(eegtut.epochs_file(visit=1))
+data = Path("data/eeg_tutorial_data_v1")
+epochs = mne.read_epochs(data / "sub-01/epochs/sub-01_visit-1_stim-epo.fif")
 epochs.interpolate_bads()
 epochs = epochs["phase == 'train'"].decimate(4)
 print(len(epochs), "trials,", len(epochs.times), "time points")
@@ -64,9 +66,10 @@ print(len(epochs), "trials,", len(epochs.times), "time points")
 
 Then the classifier. This is the one block of the tutorial you can
 treat as a recipe. It says: put the electrodes on a common scale, use
-a standard classifier (logistic regression), and train and test a
-separate one at every time point, so that we find out not just whether
-the information is there but *when*.
+a standard classifier (logistic regression, from the scikit-learn
+library; @pedregosa2011), and train and test a separate one at every
+time point, so that we find out not just whether the information is
+there but *when* [@king2014].
 
 ```{python}
 from sklearn.pipeline import make_pipeline
@@ -90,12 +93,21 @@ trials = epochs["x < 40 or x > 60"]
 is_narrow = trials.metadata["x"] > 60
 
 scores = cross_val_multiscore(decoder, trials.get_data(), is_narrow, cv=5).mean(axis=0)
-eegtut.plot_scores(trials.times, {"wide or narrow stripes": scores});
+```
+
+```{python}
+import matplotlib.pyplot as plt
+
+plt.plot(trials.times, scores, label="wide or narrow stripes")
+plt.axhline(0.5, color="grey")
+plt.xlabel("Time (s)")
+plt.ylabel("Decoding score (AUC)")
+plt.legend();
 ```
 
 Read it like an ERP, with time along the bottom, except that the
 height is now how well the classifier could tell the two kinds of
-trial apart at that moment.
+trial apart at that moment. The grey line is chance.
 
 - **Before the stimulus** the score wanders around chance, as it must:
   nothing has been shown yet, so there is nothing to decode. Notice how
@@ -117,7 +129,13 @@ Now the question the ERP could not answer: category A or category B?
 is_B = epochs.metadata["cat"] == "B"
 
 category_scores = cross_val_multiscore(decoder, epochs.get_data(), is_B, cv=5).mean(axis=0)
-eegtut.plot_scores(epochs.times, {"wide or narrow stripes": scores, "category A or B": category_scores});
+
+plt.plot(epochs.times, scores, label="wide or narrow stripes")
+plt.plot(epochs.times, category_scores, label="category A or B")
+plt.axhline(0.5, color="grey")
+plt.xlabel("Time (s)")
+plt.ylabel("Decoding score (AUC)")
+plt.legend();
 ```
 
 The category line peaks at about 0.67 at a quarter of a second. That
@@ -182,5 +200,5 @@ repetitions of the cross-validation, all time points, and every
 participant and visit. They also go a step further and train a
 classifier on one part of the experiment and test it on another, to
 ask whether the pattern that carries the category stays the same as
-the task is learned. Chapter 8 introduces that idea.
+the task is learned [@king2014]. Chapter 8 introduces that idea.
 :::

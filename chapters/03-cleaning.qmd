@@ -12,7 +12,7 @@ mne.viz.set_browser_backend("matplotlib")
 The last page ended with a recording that was mostly not brain signal.
 This page cleans it, one step at a time, and ends with the brain's
 response to a stimulus. The steps are the same in almost every EEG
-study:
+study [@luck2014]:
 
 1. **Filter** out frequencies we do not want.
 2. **Re-reference** so that voltages are measured against something sensible.
@@ -26,10 +26,11 @@ cleaning you cannot trust.
 ## Start where we left off
 
 ```{python}
+from pathlib import Path
 import mne
-import eegtut
 
-raw = mne.io.read_raw_fif(eegtut.raw_task_file(), preload=True)
+data = Path("data/eeg_tutorial_data_v1")
+raw = mne.io.read_raw_fif(data / "sub-01/raw/sub-01_visit-1_task_raw.fif", preload=True)
 layout = mne.channels.make_standard_montage("biosemi64")
 raw.rename_channels(dict(zip(raw.ch_names[:64], layout.ch_names)))
 raw.set_montage(layout)
@@ -45,17 +46,25 @@ A filter removes some frequencies from a signal and keeps others. We
 keep everything between 0.5 and 40 Hz.
 
 ```{python}
-raw.filter(0.5, 40)
-eegtut.compare_traces(unfiltered, raw, ["Oz", "Cz"], start=100, labels=["raw", "filtered"]);
+raw.filter(0.5, 40);
 ```
 
-The grey trace is the raw signal and the blue one is the same signal
-after filtering.
+Here are the same five seconds at two electrodes, first as recorded and
+then after filtering.
+
+```{python}
+unfiltered.plot(start=100, duration=5, picks=["Oz", "Cz"], scalings=dict(eeg=30e-6), show_scrollbars=False);
+```
+
+```{python}
+raw.plot(start=100, duration=5, picks=["Oz", "Cz"], scalings=dict(eeg=30e-6), show_scrollbars=False);
+```
 
 - Cutting everything **above 40 Hz** removes the 50 Hz mains
-  interference. That is why the blue trace has lost its fuzz.
+  interference. That is why the second pair of traces has lost its
+  fuzz.
 - Cutting everything **below 0.5 Hz** removes slow drift. That is why
-  the blue trace stays level while the grey one wanders.
+  `Oz` stays level in the second plot where it climbed in the first.
 
 The brain activity we care about in this tutorial lies between those
 limits, so little of interest is lost.
@@ -66,7 +75,7 @@ Run the page again from the top with `raw.filter(0.5, 15)` instead. The
 trace gets smoother still: you have now removed real brain activity
 (everything from 15 to 40 Hz) along with the noise. A filter cannot tell
 signal from noise. It only knows frequencies, so the limits are a
-choice you have to be able to defend.
+choice you have to be able to defend [@widmann2015].
 :::
 
 ## Step 2: re-reference
@@ -77,29 +86,33 @@ electrode and another, the **reference**.
 
 In the file as recorded, every channel is measured against one
 electrode on the amplifier's cap that sits at the back of the head on
-the left, close to `PO3`. See what that does:
+the left, close to `PO3`. To see what that does, map how large the
+signal is at each electrode (the darker, the larger):
 
 ```{python}
-eegtut.channel_sizes(raw);
+scalp = raw.copy().pick("eeg")
+mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds");
 ```
 
-Each bar is how large the signal is at one electrode. `PO3` and its
-neighbours (`P1`, `P3`, `P5`) are almost flat. That is not because the
-brain is quiet there. They are next to the reference, so they are being
-compared with something nearly identical to themselves. Everything else
-gets bigger with distance from that spot.
+There is a pale patch at the back on the left, around `PO3`, where the
+signal is almost flat. That is not because the brain is quiet there.
+Those electrodes are next to the reference, so they are being compared
+with something nearly identical to themselves. Everything else gets
+bigger with distance from that spot.
 
-That is an accident of where the reference was put. The usual fix is to
-use the **average of all the electrodes** as the reference instead, which
-favours no one place.
+That is an accident of where the reference was put. A common fix is to
+use the **average of all the electrodes** as the reference instead,
+which favours no one place [@bertrand1985].
 
 ```{python}
 raw.set_eeg_reference("average")
-eegtut.channel_sizes(raw);
+
+scalp = raw.copy().pick("eeg")
+mne.viz.plot_topomap(scalp.get_data().std(axis=1), scalp.info, cmap="Reds");
 ```
 
-`PO3` now has a signal like its neighbours, and the pattern no longer
-points at one corner of the head.
+The pale patch has gone: `PO3` now has a signal like its neighbours,
+and the map no longer points at one corner of the head.
 
 ::: {.callout-note}
 ## Why this matters
@@ -116,12 +129,12 @@ nothing useful: either wild noise or a flat line. It should be marked
 as bad so later steps ignore it. One bad channel left in also damages
 the average reference, because it is part of the average.
 
-The bar chart above is a quick check. A bad channel would stand far
-above the rest, or sit at zero. Nothing does here. The largest signals
-are at the very front (`Fp1`, `Fpz`, `Fp2`), which is where blinks are,
-and that is the next step. `PO7` and `O1` at the back are also on the
-large side, but not far from their neighbours. So in this excerpt we
-mark nothing.
+The map above is a quick check. A bad channel would show as a single
+very dark spot, or a single pale one, unlike its neighbours. Nothing
+stands out that much here. The largest signals are at the very front,
+which is where blinks are, and that is the next step. There is also a
+darker area at the back on the left, around `PO7` and `O1`, but it is
+not far from its surroundings. So in this excerpt we mark nothing.
 
 If a channel did look bad, this is all it takes:
 
@@ -135,7 +148,8 @@ Every blink sends a wave across the front of the head that is far
 bigger than any brain signal. Participants blink every few seconds, so
 we cannot simply throw away the affected data.
 
-The standard tool is **independent component analysis (ICA)**. The idea:
+The standard tool is **independent component analysis (ICA)**
+[@jung2000]. The idea:
 each electrode records a mixture of several sources (blinks, heartbeat,
 muscle, many brain areas). ICA un-mixes the 64 channels into separate
 **components**, each with a fixed pattern over the scalp. If one
@@ -167,14 +181,24 @@ Now remove it and compare.
 ```{python}
 with_blinks = raw.copy()
 ica.exclude = blink_components
-ica.apply(raw)
-eegtut.compare_traces(with_blinks, raw, ["Fp1", "Oz"], start=100, labels=["with blinks", "blinks removed"]);
+ica.apply(raw);
 ```
 
-At `Fp1`, on the forehead, the blinks between 102 and 104 seconds are
-gone, and outside the blinks the two traces lie on top of each other.
-That is what a good correction looks like: it removes the artefact and
-leaves everything else alone.
+The same five seconds at a forehead electrode and one at the back of
+the head, before and after:
+
+```{python}
+with_blinks.plot(start=100, duration=5, picks=["Fp1", "Oz"], scalings=dict(eeg=40e-6), show_scrollbars=False);
+```
+
+```{python}
+raw.plot(start=100, duration=5, picks=["Fp1", "Oz"], scalings=dict(eeg=40e-6), show_scrollbars=False);
+```
+
+At `Fp1`, on the forehead, the three blinks between 102 and 104 seconds
+are gone, and outside the blinks the trace is unchanged. That is what a
+good correction looks like: it removes the artefact and leaves
+everything else alone.
 
 `Oz` is at the back of the head, far from the eyes, yet it changed a
 little during the blinks too. That is the average reference at work.
@@ -255,14 +279,14 @@ that every one of several hundred recordings is treated identically:
 
 - the same 0.5 to 40 Hz filter, then the data are stored at 256 samples
   per second;
-- bad channels are found by an algorithm (PyPREP) that also makes the
-  average reference robust to them;
+- bad channels are found by an algorithm (PyPREP, an implementation of
+  @bigdely2015) that also makes the average reference robust to them;
 - ICA keeps as many components as there are good channels, and blink
   and eye-movement components are chosen by their match to the eye
   electrodes, exactly as above;
-- bad epochs are repaired or dropped by an algorithm (AutoReject) that
-  learns a separate threshold for each channel, instead of one fixed
-  100 microvolt limit.
+- bad epochs are repaired or dropped by an algorithm (AutoReject;
+  @jas2017) that learns a separate threshold for each channel, instead
+  of one fixed 100 microvolt limit.
 
 The cleaned epochs you will use from the next chapter on were made this
 way. One difference worth knowing about: over this participant's whole

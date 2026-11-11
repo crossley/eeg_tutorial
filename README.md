@@ -9,7 +9,7 @@ experiment. Built with Quarto; the pages are in `chapters/`.
 | path | what |
 |---|---|
 | `index.qmd`, `chapters/*.qmd` | The pages. Each is prose with a few Python cells. |
-| `eegtut/` | Plumbing the pages import (where the data are). No analysis. |
+| `references.bib` | The bibliography. Entries are taken from Crossref by DOI; check any you add by hand. |
 | `tools/make_demo_data.py` | Builds the demo dataset from the lab's recordings. |
 | `tools/DATA_README.md` | The dataset's own description, copied into it. |
 | `tools/run_chapter.py` | Runs a page's code cells without Quarto, as a quick check. |
@@ -38,14 +38,21 @@ allow-listed channels and columns, writes everything under tutorial
 labels, removes recording dates, and ends by scanning every output file
 for lab codes, dates and source paths.
 
-To publish the data, zip the `eeg_tutorial_data_v1` folder, upload it,
-and set `DATA_URL` and `DATA_SHA256` in `eegtut/__init__.py`; the pages
-then download it on first use.
+The pages read the data by the relative path
+`data/eeg_tutorial_data_v1/...`. To publish the data, zip that folder
+and upload it; the Colab notebooks will then start with a cell that
+downloads and unzips it to the same path.
 
 ## Writing rules
 
 - The audience knows little programming. Show only the lines that are
-  the EEG step; put everything else in `eegtut` or a hidden cell.
+  the EEG step, and keep them short.
+- Use the standard libraries directly (MNE, NumPy, pandas, Matplotlib,
+  scikit-learn). No custom helper module: students should be able to
+  reuse every line on their own data. Prefer MNE's built-in plots; where
+  one does not exist, a few plain Matplotlib lines.
+- Support factual and historical claims with a citation
+  (`[@key]`, from `references.bib`).
 - Exercises change a number and rerun. They never ask for new code.
 - Teach the method on one participant. No findings from the lab's
   unpublished work.

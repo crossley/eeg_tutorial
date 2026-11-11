@@ -11,14 +11,11 @@ Figures are saved to the folder given by --figures (default: not saved).
 from pathlib import Path
 import argparse
 import re
-import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-REPO_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_DIR))
 
 CELL = re.compile(r"^```\{python\}\n(.*?)^```", re.DOTALL | re.MULTILINE)
 

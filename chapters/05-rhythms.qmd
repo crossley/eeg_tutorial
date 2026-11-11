@@ -19,16 +19,28 @@ change.
 ## A rhythm you can see by eye
 
 At the start of the visit, before the task, the participant sat for a
-few minutes with their eyes closed. Here is a little of that
-recording, at two electrodes at the back of the head and two at the
-front. (`eegtut.clean_recording` does the filtering and re-referencing
-from chapter 3 in one line.)
+few minutes with their eyes closed. We load that recording and give it
+the first steps of chapter 3: name the channels, filter, and
+re-reference.
 
 ```{python}
+from pathlib import Path
 import mne
-import eegtut
 
-rest = eegtut.clean_recording(eegtut.raw_rest_file())
+data = Path("data/eeg_tutorial_data_v1")
+layout = mne.channels.make_standard_montage("biosemi64")
+
+rest = mne.io.read_raw_fif(data / "sub-01/raw/sub-01_visit-1_rest_raw.fif", preload=True)
+rest.rename_channels(dict(zip(rest.ch_names[:64], layout.ch_names)))
+rest.set_montage(layout)
+rest.filter(0.5, 40)
+rest.set_eeg_reference("average");
+```
+
+Here are four seconds of it, at two electrodes at the back of the head
+and two at the front.
+
+```{python}
 rest.plot(start=20, duration=4, picks=["POz", "Oz", "Fz", "FCz"],
           scalings=dict(eeg=30e-6), show_scrollbars=False);
 ```
@@ -37,10 +49,11 @@ These are not random wiggles. They are a steady wave, clearest in the
 top two traces, from the back of the head. Count the peaks in one
 second and you will get about ten.
 
-This is the **alpha rhythm**, the first thing ever seen in a human EEG,
-in the 1920s. It is strongest at the back of the head when the eyes are
+This is the **alpha rhythm**, described in the first report of the
+human EEG [@berger1929] and soon traced to the back of the head
+[@adrian1934]. It is strongest at the back of the head when the eyes are
 closed, though as you can see it reaches the front as well. The usual way to think about it is that visual cortex, with
-nothing to look at, falls into an idling rhythm.
+nothing to look at, falls into an idling rhythm [@pfurtscheller1996].
 
 ## Measuring rhythms: the power spectrum
 
@@ -67,16 +80,16 @@ spectrum.plot_topomap(bands={"Alpha (8-13 Hz)": (8, 13)}, size=3);
 
 Strongest at the back, as the traces suggested.
 
-Rhythms are grouped into **bands** with Greek-letter names. The exact
-limits vary a little from paper to paper.
+Rhythms are grouped into **bands** with Greek-letter names
+[@buzsaki2006]. The exact limits vary a little from paper to paper.
 
 | band | frequency | often seen |
 |---|---|---|
 | delta | below 4 Hz | deep sleep |
-| theta | 4 to 8 Hz | front and centre of the head during demanding tasks |
+| theta | 4 to 8 Hz | front and centre of the head during demanding tasks [@cavanagh2014] |
 | alpha | 8 to 13 Hz | back of the head, relaxed, eyes closed |
-| beta | 13 to 30 Hz | over motor cortex; drops around movement |
-| gamma | above 30 Hz | hard to measure at the scalp; easily confused with muscle |
+| beta | 13 to 30 Hz | over motor cortex; drops around movement [@pfurtscheller1999] |
+| gamma | above 30 Hz | hard to measure at the scalp; easily confused with muscle [@whitham2007] |
 
 ## Rhythms change with what the brain is doing
 
@@ -85,8 +98,22 @@ opens their eyes and starts the task. Compare the rest recording with
 the task recording from chapters 2 and 3, at the same electrode:
 
 ```{python}
-task = eegtut.clean_recording(eegtut.raw_task_file())
-eegtut.compare_spectra({"rest, eyes closed": rest, "doing the task": task}, channel="POz");
+task = mne.io.read_raw_fif(data / "sub-01/raw/sub-01_visit-1_task_raw.fif", preload=True)
+task.rename_channels(dict(zip(task.ch_names[:64], layout.ch_names)))
+task.set_montage(layout)
+task.filter(0.5, 40)
+task.set_eeg_reference("average");
+```
+
+```{python}
+import matplotlib.pyplot as plt
+
+for name, recording in {"rest, eyes closed": rest, "doing the task": task}.items():
+    spectrum = recording.compute_psd(fmin=1, fmax=30, picks=["POz"])
+    plt.plot(spectrum.freqs, spectrum.get_data()[0] * 1e12, label=name)
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("Power at POz (µV²/Hz)")
+plt.legend();
 ```
 
 During the task the alpha peak is about a tenth of its size at rest.
@@ -95,7 +122,7 @@ property of the brain's state, not a fixed feature of the person.
 
 ::: {.callout-tip}
 ## Try it
-Change `channel="POz"` to `channel="Fz"`. Is the difference between
+Change `picks=["POz"]` to `picks=["Fz"]`. Is the difference between
 rest and task as large at the front of the head?
 :::
 
@@ -137,7 +164,7 @@ Two things stand out.
 
 - **The blue band from about 9 to 16 Hz, starting just after the
   stimulus.** Alpha power drops by more than half when the stimulus
-  appears and stays down. The
+  appears and stays down [@pfurtscheller1999]. The
   idling rhythm is interrupted the moment visual cortex has work to
   do. It is the same effect as rest versus task, happening within a
   single trial.
@@ -155,8 +182,9 @@ same direction, on every trial. A rhythm that gets weaker after the
 stimulus, like alpha here, is invisible in an ERP, because its peaks
 and troughs fall at different moments on different trials and average
 to nothing. Time-frequency analysis measures the *strength* of the
-rhythm on each trial before averaging, so it survives. Neither view is
-better; they show different things.
+rhythm on each trial before averaging, so it survives
+[@tallonbaudry1999; @cohen2014]. Neither view is better; they show
+different things.
 :::
 
 ::: {.callout-tip}
