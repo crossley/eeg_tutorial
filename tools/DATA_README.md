@@ -25,6 +25,7 @@ electrodes by the left eye.
 | `sub-01/raw/sub-01_visit-1_task_behaviour.csv` | One row per trial of that excerpt. |
 | `sub-01/raw/sub-01_visit-1_rest_raw.fif` | One minute of eyes-closed rest from the same visit, same channels, no triggers. |
 | `sub-01/epochs/sub-01_visit-<n>_stim-epo.fif` | Cleaned epochs around every stimulus of visit `n`: -0.2 to 0.8 s, 256 Hz, 0.5 to 40 Hz, average reference, eye movements removed by ICA, bad epochs repaired or dropped. Channels named in the 10-20 system. A channel listed as bad was left out of the cleaning and should be interpolated or ignored. The trial table is in `.metadata`. |
+| `sub-01/epochs/sub-01_visit-1_fb-epo.fif` | The same for visit 1, cut around the feedback instead of the stimulus. Feedback was a ring around the stimulus, green for correct and red for incorrect; the stimulus stayed on screen. |
 | `group/sub-<nn>_stim-ave.fif` | For each of 11 participants, the average response to category A and to category B on the training trials of each visit (comments `visit-<n>/A`, `visit-<n>/B`). Two participants have four visits. |
 | `manifest.csv` | Size and SHA-256 of every file. |
 

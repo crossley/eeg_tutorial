@@ -12,7 +12,8 @@ Three tiers, all from one experiment:
                   first N_RAW_TRIALS trials of visit 1) and one minute
                   of eyes-closed rest, downsampled to RAW_SFREQ and
                   otherwise untouched, with the matching behaviour rows
-  sub-01/epochs/  the cleaned stimulus-locked epochs of every visit
+  sub-01/epochs/  the cleaned stimulus-locked epochs of every visit, and
+                  the feedback-locked epochs of visit 1
   group/          each participant's average response per visit and
                   category
 
@@ -138,12 +139,12 @@ def build_raw_rest(label, code):
                              fmt="single", overwrite=True, verbose="ERROR")
 
 
-def read_stim_epochs(code, visit):
-    """One visit's cleaned stimulus-locked epochs with allow-listed metadata, or None."""
+def read_epochs(code, visit, lock="Stim"):
+    """One visit's cleaned epochs of one locking (Stim or FB) with allow-listed metadata, or None."""
     path = SRC / "EEG_epo_v2" / "ii_task" / f"P{code:03d}_ii_{visit}-epo.fif"
     if not path.exists():
         return None
-    epochs = mne.read_epochs(path, preload=True, verbose="ERROR")["Stim"]
+    epochs = mne.read_epochs(path, preload=True, verbose="ERROR")[lock]
     epochs.pick("eeg", exclude=[])
     epochs.metadata = epochs.metadata[METADATA_COLUMNS].reset_index(drop=True)
     return strip_identity(epochs)
@@ -153,9 +154,12 @@ def build_epochs(label, code):
     out = OUT / label / "epochs"
     out.mkdir(parents=True, exist_ok=True)
     for visit in VISITS:
-        epochs = read_stim_epochs(code, visit)
+        epochs = read_epochs(code, visit)
         epochs.save(out / f"{label}_visit-{visit}_stim-epo.fif", fmt="single", overwrite=True,
                     verbose="ERROR")
+    feedback = read_epochs(code, RAW_VISIT, lock="FB")
+    feedback.save(out / f"{label}_visit-{RAW_VISIT}_fb-epo.fif", fmt="single", overwrite=True,
+                  verbose="ERROR")
 
 
 def build_group():
@@ -165,7 +169,7 @@ def build_group():
     for label, code in CODES.items():
         evokeds = []
         for visit in VISITS:
-            epochs = read_stim_epochs(code, visit)
+            epochs = read_epochs(code, visit)
             if epochs is None:
                 continue
             epochs.interpolate_bads(verbose="ERROR")

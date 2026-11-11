@@ -1,7 +1,7 @@
 """Plumbing for the tutorial pages: where the demo data are, and nothing about EEG.
 
 The pages import this so that the code they show is only the analysis.
-On first use the demo dataset is downloaded (about 270 MB) unless it is
+On first use the demo dataset is downloaded (about 320 MB) unless it is
 already in data/ or the folder named by the EEGTUT_DATA variable.
 """
 
@@ -53,6 +53,11 @@ def behaviour_file(visit=1):
 def epochs_file(visit):
     """The cleaned stimulus-locked epochs of one visit (1 to 5)."""
     return data_dir() / "sub-01" / "epochs" / f"sub-01_visit-{visit}_stim-epo.fif"
+
+
+def feedback_epochs_file(visit=1):
+    """The cleaned feedback-locked epochs (visit 1 only)."""
+    return data_dir() / "sub-01" / "epochs" / f"sub-01_visit-{visit}_fb-epo.fif"
 
 
 def group_files():

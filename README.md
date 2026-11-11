@@ -32,7 +32,7 @@ runs no Python.
 ## The demo dataset
 
 `python tools/make_demo_data.py` rebuilds `data/eeg_tutorial_data_v1/`
-(about 270 MB, under a minute) from the source experiment, which it
+(about 320 MB, under a minute) from the source experiment, which it
 only reads. It needs `private/sources.toml`. The script copies only
 allow-listed channels and columns, writes everything under tutorial
 labels, removes recording dates, and ends by scanning every output file
@@ -49,4 +49,8 @@ then download it on first use.
 - Exercises change a number and rerun. They never ask for new code.
 - Teach the method on one participant. No findings from the lab's
   unpublished work.
+- Motivate every comparison before showing it: say where and when an
+  effect is expected and why, then look. Prefer well-known effects.
+- Check every number and description in the prose against the figure the
+  code actually produces.
 - End each page with how the lab's real pipeline does the same step.

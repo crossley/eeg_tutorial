@@ -22,12 +22,13 @@ electrodes on the scalp throughout each visit.
 ## The data
 
 The full dataset is about a terabyte. The tutorial uses a small subset
-(about 270 MB):
+(about 320 MB):
 
 - six minutes of **raw recording** from one participant's first visit,
   exactly as recorded apart from being stored at a lower sampling rate,
   plus one minute of rest with eyes closed;
-- the same participant's **cleaned trials** from all five visits;
+- the same participant's **cleaned trials** from all five visits, cut
+  around each stimulus, and from the first visit cut around the feedback;
 - **average responses** from eleven participants.
 
 All of it is de-identified: participants are `sub-01` to `sub-11`, and
