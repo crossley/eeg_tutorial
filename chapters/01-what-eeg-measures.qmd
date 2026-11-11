@@ -1,0 +1,120 @@
+---
+title: "What EEG measures"
+---
+
+Before opening a recording, it helps to know what the numbers in it
+are. This page has no code. It covers where the EEG signal comes from,
+what it is good for, and what it cannot tell you. Those limits explain
+many of the choices in the chapters that follow.
+
+## Where the signal comes from
+
+The first recording of electrical activity from the human scalp was
+published almost a century ago [@berger1929]. The principle has not
+changed: put electrodes on the head, and measure the tiny voltages
+between them.
+
+Those voltages come from neurons in the **cortex**, the folded outer
+layer of the brain. When a neuron receives input from other neurons,
+small electrical currents flow in and around it. The current from one
+neuron is far too small to detect from outside the head. But the
+cortex contains a great many **pyramidal cells** that are lined up side
+by side, all pointing the same way, like the bristles of a brush. When
+many thousands of them receive input at the same moment, their
+currents add up to something large enough to reach the scalp
+[@buzsaki2012; @luck2014].
+
+Three things follow from that, and each one matters later.
+
+**EEG reflects input, not output.** The signal comes mainly from the
+slow currents produced when neurons *receive* input, not from the
+brief spikes they fire to send signals on. Spikes are too short, and
+too poorly lined up in time across neurons, to add up at the scalp
+[@buzsaki2012].
+
+**EEG only sees neurons acting together.** If a patch of cortex is busy
+but its neurons are active at different moments, their currents cancel
+and little reaches the scalp. A sizeable area of cortex has to be
+active in step before anything is visible outside the head
+[@cooper1965]. So EEG is a measure of *synchronised* activity. A flat
+signal does not mean an idle brain.
+
+**Direction matters.** Because the cells are lined up, the patch of
+cortex behaves like a small battery with a positive and a negative
+end. Whether an electrode above it sees a positive or a negative
+voltage depends on which way the patch is facing, and the cortex is
+folded, so patches face in every direction. This is why, in chapter 4,
+the sign of a peak says nothing about "more" or "less" activity.
+
+## From the cortex to the electrode
+
+Between the cortex and the electrode lie fluid, the skull and the
+scalp. The skull conducts electricity poorly, and the result is that
+the signal from any one patch of cortex is **smeared** over a wide area
+of the scalp by the time it gets out [@nunez2006]. Every electrode
+picks up a blend of activity from many patches, and every patch
+contributes to many electrodes.
+
+This has two consequences you will meet again.
+
+- **You cannot simply read off where activity is.** A peak at one
+  electrode does not mean the activity is in the cortex directly
+  beneath it. Working back from the scalp to the sources is possible
+  only with extra assumptions, because many different arrangements of
+  sources would give the same pattern on the scalp [@nunez2006]. In
+  this tutorial we stay at the scalp and describe *where on the head*
+  an effect is, not where in the brain.
+- **Neighbouring electrodes look alike** for reasons that have nothing
+  to do with brain areas talking to each other. They are partly
+  recording the same sources. Chapter 7, on connectivity, is largely
+  about dealing with this.
+
+The signal is also small. By the time it reaches the scalp it is a few
+tens of microvolts at most, smaller than the electrical signals from
+blinking, from the muscles of the jaw and neck, and from the mains
+wiring in the walls. That is why chapter 3 is devoted to cleaning.
+
+## What EEG is good at, and what it is not
+
+**It is fast.** Electrical signals travel from the cortex to the scalp
+essentially instantly, and the amplifier measures them thousands of
+times a second. EEG can separate events in the brain that are a few
+thousandths of a second apart. Brain imaging with fMRI, by comparison,
+measures changes in blood flow that unfold over seconds
+[@logothetis2008]. If your question is *when* something happens, or in
+what order, EEG is the right tool.
+
+**It is poor at location.** Because of the smearing described above,
+EEG cannot tell you precisely where in the brain a signal came from,
+and it is nearly blind to structures deep in the brain, whose signals
+are too weak by the time they reach the surface. If your question is
+*where*, fMRI is far better.
+
+**It is direct.** EEG measures the electrical activity of neurons
+itself, not a slower side effect of it such as blood flow.
+
+**It is cheap and harmless.** There is no radiation, no magnetic field
+and no injection, and a participant can come back as often as needed.
+The experiment used in this tutorial recorded the same people on five
+separate visits, which would be hard to do any other way.
+
+| | EEG | fMRI |
+|---|---|---|
+| measures | voltage from synchronised input to cortical neurons | blood oxygen, which follows neural activity |
+| timing | thousandths of a second | seconds |
+| location | poor; centimetres at best, and uncertain | good; millimetres |
+| deep structures | mostly out of reach | visible |
+| repeat visits | easy | expensive |
+
+## What this means for the rest of the tutorial
+
+- The signal is tiny and buried in larger signals from elsewhere, so
+  we clean it (chapter 3) and average over many trials (chapter 4).
+- Its strength is timing, so nearly every plot has time along the
+  bottom, in fractions of a second.
+- It reflects neurons acting in step, and much of that activity is
+  rhythmic (chapter 5).
+- Every electrode records a blend, so we are careful about what a
+  pattern over the scalp can and cannot tell us (chapters 6 and 7).
+
+Next, we open a recording.

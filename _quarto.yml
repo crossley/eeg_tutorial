@@ -8,6 +8,7 @@ book:
   subtitle: "A hands-on introduction using the lab's category-learning data"
   chapters:
     - index.qmd
+    - chapters/01-what-eeg-measures.qmd
     - chapters/02-raw-data.qmd
     - chapters/03-cleaning.qmd
     - chapters/04-erps.qmd

@@ -12,6 +12,7 @@ experiment. Built with Quarto; the pages are in `chapters/`.
 | `references.bib` | The bibliography. Entries are taken from Crossref by DOI; check any you add by hand. |
 | `tools/make_demo_data.py` | Builds the demo dataset from the lab's recordings. |
 | `tools/DATA_README.md` | The dataset's own description, copied into it. |
+| `tools/make_notebooks.py` | Writes `notebooks/`, the Colab version of each chapter. Run after editing a chapter. |
 | `tools/run_chapter.py` | Runs a page's code cells without Quarto, as a quick check. |
 | `data/` | The built dataset. Not versioned. |
 | `private/` | Source paths and the key to lab participant codes. Not versioned, never shared. |

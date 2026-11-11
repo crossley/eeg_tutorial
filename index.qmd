@@ -1,6 +1,4 @@
----
-title: "Start here"
----
+# Start here {.unnumbered}
 
 This tutorial teaches how EEG data are analysed in the lab, from the
 recording as it comes off the amplifier to the results. It uses a small
@@ -12,6 +10,10 @@ change a number when a **Try it** box suggests one. The code uses the
 standard free tools directly (MNE-Python for EEG, with a little NumPy,
 pandas and Matplotlib), so what you see here is what you would type
 for your own data.
+
+Each chapter with code has an **Open in Colab** button at the top. It
+opens a copy of the chapter that you can run and change in your
+browser, with nothing to install. You need a Google account.
 
 ## The experiment
 
@@ -40,7 +42,7 @@ recording dates have been removed.
 
 ## The chapters
 
-1. Start here (this page)
+1. [What EEG measures](chapters/01-what-eeg-measures.qmd): where the signal comes from, what it can and cannot tell you
 2. [The raw recording](chapters/02-raw-data.qmd): what is in the file, electrodes, triggers
 3. [Cleaning the recording](chapters/03-cleaning.qmd): filtering, referencing, removing blinks, cutting into trials
 4. [The brain's response to a stimulus](chapters/04-erps.qmd): averaging, reading an ERP, comparing conditions

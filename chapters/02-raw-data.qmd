@@ -2,6 +2,8 @@
 title: "The raw recording"
 ---
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/02-raw-data.ipynb)
+
 ```{python}
 #| include: false
 import mne
@@ -17,8 +19,9 @@ anything has been cleaned. By the end you should be able to say:
 - how the recording knows when each stimulus appeared, and
 - how to check that the recording and the task's own trial list agree.
 
-You do not need to write code. Run each cell, read what comes out, and
-try the changes suggested under **Try it**.
+You do not need to write code. Read the page, or press **Open in
+Colab** above to run it yourself: run each cell, read what comes out,
+and try the changes suggested under **Try it**.
 
 ## The recording
 

@@ -2,6 +2,8 @@
 title: "The brain's response to a stimulus"
 ---
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/04-erps.ipynb)
+
 ```{python}
 #| include: false
 import mne

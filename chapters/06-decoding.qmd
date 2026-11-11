@@ -2,6 +2,8 @@
 title: "Decoding"
 ---
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/crossley/eeg_tutorial/blob/main/notebooks/06-decoding.ipynb)
+
 ```{python}
 #| include: false
 import mne
